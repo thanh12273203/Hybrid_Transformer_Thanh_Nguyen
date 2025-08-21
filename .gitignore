@@ -1,0 +1,9 @@
+# .gitignore
+*.pyc
+__pycache__/
+data/*
+!data/.gitkeep
+venv/*
+.pytest_cache/
+.vscode/
+checkpoint.pt
