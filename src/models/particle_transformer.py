@@ -1,9 +1,7 @@
-from typing import List, Tuple, Dict, Optional
+from typing import List, Optional
 
 import torch
 from torch import nn, Tensor
-from lgatr.interface import extract_vector
-from lgatr.layers import EquiLinear
 
 from .classifier import ClassAttentionBlock, Classifier
 from .embeddings import InteractionEmbedding
@@ -60,22 +58,12 @@ class ParticleTransformerEncoder(nn.Module):
         embed_dim: int = 128,
         num_heads: int = 8,
         num_layers: int = 8,
-        to_multivector: bool = False,
-        in_s_channels: Optional[int] = None,
-        out_s_channels: Optional[int] = None,
         dropout: float = 0.1,
         expansion_factor: int = 4,
         pair_embed_dims: List[int] = [64, 64, 64]
     ):
         super(ParticleTransformerEncoder, self).__init__()
-        self.to_multivector = to_multivector
-        self.equilinear = EquiLinear(
-            in_mv_channels=1,
-            out_mv_channels=1,
-            in_s_channels=in_s_channels,
-            out_s_channels=out_s_channels
-        )
-        self.proj = nn.Linear(16 if self.to_multivector else 4, embed_dim)
+        self.proj = nn.Linear(4, embed_dim)
         self.interaction_embed = InteractionEmbedding(
             num_interaction_features=4,
             pair_embed_dims=pair_embed_dims + [num_heads]
@@ -96,25 +84,12 @@ class ParticleTransformerEncoder(nn.Module):
         # Embed interaction features
         U = self.interaction_embed(U)  # (B * num_heads, N, N)
 
-        # Pass through the EquiLinear layer if to_multivector is True
-        if self.to_multivector:
-            x = x.view(B, N, 1, F)
-            x, _ = self.equilinear(x)  # (B, N, 1, 16)
-            x = x.view(B, N, 16)
-
         # Project input features to embedding dimension
         x = self.proj(x)  # (B, N, embed_dim)
 
         # Encoder with particle attention blocks
         for layer in self.encoder:
             x = layer(x, padding_mask, U)  # (B, N, embed_dim)
-
-        # # Project back to original feature space
-        # if self.to_multivector:
-        #     x = self.linear(x)  # (B, N, 16)
-        #     x = x.view(B, N, 1, 16)
-        #     x, _ = self.equilinear(x)  # (B, N, 1, 16)
-        #     x = x.view(B, N, 16)
 
         return x  # (B, N, embed_dim)
     
@@ -145,12 +120,6 @@ class ParticleTransformer(nn.Module):
         Number of layers in the MLP head.
     hidden_dim: int, optional
         Dimensionality of the hidden layers.
-    to_multivector: bool, optional
-        Whether to use multivector representation for particles.
-        If True, the model will use a 16-dimensional representation for each particle.
-        If False, the model will use the original 4-dimensional representation.
-    hidden_mv_channels - reinsert_s_channels: optional
-        EquiLinear layer's configurations.
     dropout: float, optional
         Dropout rate for the model.
     expansion_factor: int, optional
@@ -164,7 +133,7 @@ class ParticleTransformer(nn.Module):
     inference: bool, optional
         Whether to use the model for inference.
 
-    .. References:
+    .. References::
         Huilin Qu, Congqiao Li, and Sitian Qian.
         [Particle Transformer for Jet Tagging](https://arxiv.org/abs/2202.03772).
         In *Proceedings of the 39th International Conference on Machine Learning*, pages 18281-18292, 2022.
@@ -182,15 +151,6 @@ class ParticleTransformer(nn.Module):
         num_cls_layers: Optional[int] = None,
         num_mlp_layers: Optional[int] = None,
         hidden_dim: Optional[int] = None,
-        to_multivector: Optional[bool] = None,
-        hidden_mv_channels: Optional[int] = None,
-        in_s_channels: Optional[int] = None,
-        out_s_channels: Optional[int] = None,
-        hidden_s_channels: Optional[int] = None,
-        attention: Optional[Dict] = None,
-        mlp: Optional[Dict] = None,
-        reinsert_mv_channels: Optional[Tuple[int]] = None,
-        reinsert_s_channels: Optional[Tuple[int]] = None,
         dropout: Optional[float] = None,
         expansion_factor: Optional[int] = None,
         pair_embed_dims: Optional[List[int]] = None,
@@ -211,15 +171,6 @@ class ParticleTransformer(nn.Module):
             self.num_cls_layers = num_cls_layers if num_cls_layers is not None else config.num_cls_layers
             self.num_mlp_layers = num_mlp_layers if num_mlp_layers is not None else config.num_mlp_layers
             self.hidden_dim = hidden_dim if hidden_dim is not None else config.hidden_dim
-            self.to_multivector = to_multivector if to_multivector is not None else config.to_multivector
-            self.hidden_mv_channels = hidden_mv_channels if hidden_mv_channels is not None else config.hidden_mv_channels
-            self.in_s_channels = in_s_channels if in_s_channels is not None else config.in_s_channels
-            self.out_s_channels = out_s_channels if out_s_channels is not None else config.out_s_channels
-            self.hidden_s_channels = hidden_s_channels if hidden_s_channels is not None else config.hidden_s_channels
-            self.attention = attention if attention is not None else config.attention
-            self.mlp = mlp if mlp is not None else config.mlp
-            self.reinsert_mv_channels = reinsert_mv_channels if reinsert_mv_channels is not None else config.reinsert_mv_channels
-            self.reinsert_s_channels = reinsert_s_channels if reinsert_s_channels is not None else config.reinsert_s_channels
             self.dropout = dropout if dropout is not None else config.dropout
             self.expansion_factor = expansion_factor if expansion_factor is not None else config.expansion_factor
             self.pair_embed_dims = pair_embed_dims if pair_embed_dims is not None else config.pair_embed_dims
@@ -236,15 +187,6 @@ class ParticleTransformer(nn.Module):
             self.num_cls_layers = num_cls_layers if num_cls_layers is not None else 2
             self.num_mlp_layers = num_mlp_layers if num_mlp_layers is not None else 0
             self.hidden_dim = hidden_dim if hidden_dim is not None else 256
-            self.to_multivector = to_multivector if to_multivector is not None else False
-            self.hidden_mv_channels = hidden_mv_channels if hidden_mv_channels is not None else 8
-            self.in_s_channels = in_s_channels if in_s_channels is not None else None
-            self.out_s_channels = out_s_channels if out_s_channels is not None else None
-            self.hidden_s_channels = hidden_s_channels if hidden_s_channels is not None else 16
-            self.attention = attention if attention is not None else None
-            self.mlp = mlp if mlp is not None else None
-            self.reinsert_mv_channels = reinsert_mv_channels if reinsert_mv_channels is not None else None
-            self.reinsert_s_channels = reinsert_s_channels if reinsert_s_channels is not None else None
             self.dropout = dropout if dropout is not None else 0.1
             self.expansion_factor = expansion_factor if expansion_factor is not None else 4
             self.pair_embed_dims = pair_embed_dims if pair_embed_dims is not None else [64, 64, 64]
@@ -256,30 +198,18 @@ class ParticleTransformer(nn.Module):
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim), requires_grad=True)
         nn.init.normal_(self.cls_token, mean=0.0, std=1.0)
 
-        self.processor = ParticleProcessor(to_multivector=self.to_multivector)
-        self.equilinear = EquiLinear(
-            in_mv_channels=1,
-            out_mv_channels=1,
-            in_s_channels=self.in_s_channels,
-            out_s_channels=self.out_s_channels
-        )
+        self.processor = ParticleProcessor()
         self.encoder = ParticleTransformerEncoder(
             embed_dim=self.embed_dim,
             num_heads=self.num_heads,
             num_layers=self.num_layers,
-            to_multivector=self.to_multivector,
-            in_s_channels=self.in_s_channels,
-            out_s_channels=self.out_s_channels,
             dropout=self.dropout,
             expansion_factor=self.expansion_factor,
             pair_embed_dims=self.pair_embed_dims
         )
 
-        # For self-supervised learing without to_multivector
-        self.fc = nn.Linear(
-            self.max_num_particles * self.embed_dim,
-            16 if self.to_multivector else self.num_particle_features
-        )
+        # For self-supervised learning
+        self.fc = nn.Linear(self.max_num_particles * self.embed_dim, self.num_particle_features)
 
         # For classification
         self.decoder = nn.ModuleList([
@@ -343,19 +273,6 @@ class ParticleTransformer(nn.Module):
             return output
         else:
             x = x.view(B, -1)  # (B, N * embed_dim)
-            x = self.fc(x)  # (B, 16 if to_multivector else 4)
-
-            if self.to_multivector:
-                x = x.view(B, 1, 1, 16)
-                x, _ = self.equilinear(x)  # (B, 1, 1, 16)
-                x = x.view(B, 16)
-                x = extract_vector(x)  # (B, 4)
-
-                # # Convert to (pT, eta, phi, E)
-                # pT = torch.sqrt(x[..., 1]**2 + x[..., 2]**2)
-                # eta = torch.asinh(x[..., 3] / pT)
-                # phi = torch.atan2(x[..., 2], x[..., 1])
-                # energy = x[..., 0]
-                # x = torch.stack([pT, eta, phi, energy], dim=-1)
+            x = self.fc(x)  # (B, num_particle_features)
 
             return x

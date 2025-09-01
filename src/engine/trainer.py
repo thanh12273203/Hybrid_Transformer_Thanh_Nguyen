@@ -91,8 +91,8 @@ class Trainer:
         start_epoch: Optional[int] = None,
         history: Optional[Dict[str, List[float]]] = None,
         logging_dir: Optional[str] = None,
-        progress_bar: Optional[bool] = None,
         logging_steps: Optional[int] = None,
+        progress_bar: Optional[bool] = None,
         save_best: Optional[bool] = None,
         save_ckpt: Optional[bool] = None,
         device: Optional[torch.device] = None,
@@ -176,10 +176,11 @@ class Trainer:
         os.makedirs(self.log_dir, exist_ok=True)
 
         # Subfolders
-        self.best_dir = os.path.join(self.log_dir, 'best')
+        self.best_models_dir = os.path.join(self.log_dir, 'best')
+        self.checkpoints_dir = os.path.join(self.log_dir, 'checkpoints')
         self.loggings_dir = os.path.join(self.log_dir, 'loggings')
-        self.outputs_dir = os.path.join(self.log_dir, 'outputs')
-        os.makedirs(self.best_dir, exist_ok=True)
+        os.makedirs(self.best_models_dir, exist_ok=True)
+        os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.loggings_dir, exist_ok=True)
 
         # Determine run index
@@ -188,9 +189,9 @@ class Trainer:
 
         # Logging and best model paths
         self._log_header_written = False
-        self.log_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
-        self.best_model_path = os.path.join(self.best_dir, f"{self.run_name}.pt") if self.save_best else None
-        self.checkpoint_path = os.path.join(self.log_dir, "checkpoint.pt") if self.save_ckpt else None
+        self.best_model_path = os.path.join(self.best_models_dir, f"{self.run_name}.pt") if self.save_best else None
+        self.checkpoint_path = os.path.join(self.checkpoints_dir, f"{self.run_name}.pt") if self.save_ckpt else None
+        self.logging_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
 
     def _get_next_run_index(self, directory: str, prefix: str, suffix: str) -> int:
         os.makedirs(directory, exist_ok=True)
@@ -220,8 +221,8 @@ class Trainer:
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
         self.run_name = checkpoint['run_name']
         self._log_header_written = True
-        self.log_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
-        self.best_model_path = os.path.join(self.best_dir, f"{self.run_name}.pt") if self.save_best else None
+        self.logging_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
+        self.best_model_path = os.path.join(self.best_models_dir, f"{self.run_name}.pt") if self.save_best else None
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         if self.scheduler is not None and checkpoint['scheduler_state_dict'] is not None:
@@ -237,7 +238,7 @@ class Trainer:
 
     def log_csv(self, log_dict: Dict[str, float]):
         write_header = not self._log_header_written
-        with open(self.log_path, 'a', newline='') as csvfile:
+        with open(self.logging_path, 'a', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=log_dict.keys())
             if write_header:
                 writer.writeheader()
@@ -394,9 +395,8 @@ class Trainer:
     @torch.no_grad()
     def evaluate(
         self,
-    loss_type: str,
-    plot: Optional[Union[Callable, List[Union[Callable, tuple]]]] = None,
-    save_plots: bool = False
+        loss_type: str,
+        plot: Optional[Union[Callable, List[Callable]]] = None
     ) -> Tuple[float, float, np.ndarray, np.ndarray]:
         if self.test_loader is None:
             raise ValueError("Test dataset is not provided.")
@@ -560,8 +560,10 @@ class MaskedModelTrainer(Trainer):
                     # Track sum of each component for average
                     if loss_components_sum is None:
                         loss_components_sum = [0.0 for _ in components]
+
                     for i, comp in enumerate(components):
                         loss_components_sum[i] += comp.item()
+
                     avg_components = [s / (batch_idx + 1) for s in loss_components_sum]
 
                     avg_loss = running_loss / (batch_idx + 1)
@@ -666,14 +668,14 @@ class MaskedModelTrainer(Trainer):
     @torch.no_grad()
     def evaluate(
         self,
-    plot: Optional[Union[Callable, List[Union[Callable, tuple]]]] = None,
-    save_plots: bool = False
-    ) -> float:
+        plot: Optional[Union[Callable, List[Callable]]] = None
+    ) -> Tuple[float, float, np.ndarray, np.ndarray]:
         if self.test_loader is None:
             raise ValueError("Test dataset is not provided.")
         
         self.model.eval()
         test_loss = 0.0
+        test_metric = 0.0
         test_components_sum = None
         y_true_list = []
         y_pred_list = []
@@ -690,8 +692,12 @@ class MaskedModelTrainer(Trainer):
             tloss, t_components = self.criterion(outputs_test, y_test)
             test_loss += tloss.item()
 
+            if self.metric:
+                test_metric += self.metric(outputs_test, y_test)
+
             if test_components_sum is None:
                 test_components_sum = [0.0 for _ in t_components]
+
             for i, comp in enumerate(t_components):
                 test_components_sum[i] += comp.item()
 
@@ -699,6 +705,7 @@ class MaskedModelTrainer(Trainer):
             y_true_list.append(y_test.cpu().numpy())
 
         test_loss /= len(self.test_loader)
+        test_metric /= len(self.test_loader)
         avg_test_components = [s / len(self.test_loader) for s in test_components_sum]
 
         print(
@@ -720,4 +727,4 @@ class MaskedModelTrainer(Trainer):
             else:
                 plot(y_true, y_pred)
 
-        return test_loss, y_true, y_pred        
+        return test_loss, test_metric, y_true, y_pred        

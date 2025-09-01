@@ -1,0 +1,57 @@
+model:
+    num_classes: 10
+    embed_dim: 128
+    num_heads: 8
+    num_layers: 8
+    num_cls_layers: 2
+    num_mlp_layers: 0
+    hidden_dim: 256
+    hidden_mv_channels: 8
+    in_s_channels: 
+    out_s_channels: 
+    hidden_s_channels: 16
+    attention: {}
+    mlp: {}
+    reinsert_mv_channels: 
+    reinsert_s_channels: 
+    dropout: 0.1
+    expansion_factor: 4
+    max_num_particles: 128
+    num_particle_features: 4
+    pair_embed_dims: [64, 64, 64]
+    mask: False
+    weights: 'logs/LorentzParT/best/pretrained_equilinear_clf.pt'
+    inference: False
+
+
+train:
+    batch_size: 64
+    criterion:
+        # All supported loss functions can be found in 'src/loss/loss_registry.py'
+        name: 'cross_entropy_loss'
+        kwargs:
+            loss_coef: [0.25, 0.25, 0.25, 0.25]  # [pT, eta, phi, energy]
+            reduction: 'mean'  # 'mean', 'sum', 'none'
+    optimizer:
+        # All supported optimizers can be found in 'src/optim/optim_registry.py'
+        name: 'adam'
+        kwargs:
+            lr: 0.0001
+            weight_decay: 0.0
+    scheduler:
+        # All supported schedulers can be found in 'src/optim/scheduler_registry.py'
+        name: 'exponential_lr'
+        kwargs:
+            gamma: 0.95
+            factor: 0.5
+            patience: 5
+    num_epochs: 20
+    start_epoch: 0
+    logging_dir: 'logs'
+    logging_steps: 1000
+    progress_bar: False
+    save_best: True
+    save_ckpt: True
+    device: 'cuda'  # 'cuda' or 'cpu'
+    num_workers: 0
+    pin_memory: True

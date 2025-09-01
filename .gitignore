@@ -6,4 +6,3 @@ data/*
 venv/*
 .pytest_cache/
 .vscode/
-checkpoint.pt

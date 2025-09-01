@@ -37,7 +37,7 @@ def dummy_dataset() -> Tuple[np.ndarray, np.ndarray, int, int, int]:
     num_particle_features = 4
     num_classes = 5
     X = np.random.randn(num_samples, num_particle_features, max_num_particles).astype(np.float32)
-    y = np.random.randint(0, num_classes, size=(num_samples,))
+    y = np.random.randint(0, num_classes, size=(num_samples, num_classes)).astype(np.float32)
 
     return X, y, num_classes, max_num_particles, num_particle_features
 
@@ -51,20 +51,12 @@ def make_model_config(**overrides: Dict) -> ParticleTransformerConfig:
         'num_cls_layers': 1,
         'num_mlp_layers': 1,
         'hidden_dim': 32,
-        'hidden_mv_channels': 8,
-        'in_s_channels': 1,
-        'out_s_channels': 1,
-        'hidden_s_channels': 1,
-        'attention': {},
-        'mlp': {},
-        'reinsert_mv_channels': None,
-        'reinsert_s_channels': None,
         'dropout': 0.1,
         'expansion_factor': 2,
         'pair_embed_dims': [16, 16],
         'max_num_particles': 128,
         'num_particle_features': 4,
-        'mask': None
+        'mask': False
     }
     default.update(overrides)
     return ParticleTransformerConfig(**default)
@@ -105,10 +97,10 @@ def make_dataset(
     split_idx: int = 5,
     normalize: List[bool] = [True, False, False, True],
     norm_dict: Dict[str, List[float]] = {
-        'pT': [32.437591552734375, 63.530086517333984],
-        'eta': [-4.0474991692462936e-05, 0.6030874252319336],
-        'phi': [0.0003407818730920553, 1.2022391557693481],
-        'energy': [46.549705505371094, 97.74372100830078],
+        'pT': [92.67603302001953, 105.75433349609375],
+        'eta': [-0.00041131096077151597, 0.9181342124938965],
+        'phi': [0.00041396886808797717, 1.8135319948196411],
+        'energy': [133.9013214111328, 167.53518676757812]
     },
     mask_mode: Optional[str] = None
 ) -> JetClassDataset:

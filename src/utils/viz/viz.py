@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -115,10 +115,24 @@ def plot_history(history: Dict[str, List[float]]) -> None:
 
 
 # Function to visualize the confusion matrix
-def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, labels: List[str]) -> None:
+def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, labels: Optional[List[str]] = None) -> None:
     y_true_classes = np.argmax(y_true, axis=1)
     y_pred_classes = np.argmax(y_pred, axis=1)
     cm = confusion_matrix(y_true_classes, y_pred_classes,labels=np.arange(y_true.shape[1]))
+
+    if labels is None:
+        labels = [
+            "$q/g$",  # 0
+            "$H \\to b\\bar{b}$",  # 1
+            "$H \\to c\\bar{c}$",  # 2
+            "$H \\to gg$",  # 3
+            "$H \\to 4q$",  # 4
+            "$H \\to \\ell \\nu qq'$",  # 5
+            "$Z \\to q\\bar{q}$",  # 6
+            "$W \\to qq'$",  # 7
+            "$t \\to b\\ell \\nu$",  # 8
+            "$t \\to bqq'$"  # 9
+        ]
 
     plt.figure(figsize=(6, 5))
     sns.heatmap(cm, annot=True, fmt='d', cmap='coolwarm', xticklabels=labels, yticklabels=labels)
@@ -174,36 +188,5 @@ def plot_roc_curve(y_true: np.ndarray, y_pred_prob: np.ndarray) -> None:
     plt.ylabel("True Positive Rate")
     plt.title("Macro-Average ROC Curve")
     plt.legend(loc='lower right')
-    plt.tight_layout()
-    plt.show()
-
-
-# Function to visualize pretraining loss for VICReg
-def plot_VICReg_history(history: Dict[str, List[float]]) -> None:
-    # Find the epoch where the VICReg loss is minimal
-    min_epoch = history['VICReg_loss'].index(min(history['VICReg_loss']))
-
-    plt.figure(figsize=(12, 5))
-    
-    plt.subplot(1, 2, 1)
-    plt.plot(history['variance_loss'], label="variance loss")
-    plt.plot(history['invariance_loss'], label="invariance loss")
-    plt.plot(history['covariance_loss'], label="covariance loss")
-    plt.axvline(x=min_epoch, color='black', linestyle='--', label="min VICReg loss")
-    plt.title("Pretraining Losses")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.legend()
-    plt.grid(True)
-
-    plt.subplot(1, 2, 2)
-    plt.plot(history['VICReg_loss'], color='red', label="VICReg loss")
-    plt.axvline(x=min_epoch, color='black', linestyle='--', label="min VICReg loss")
-    plt.title("Total VICReg Loss")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.legend()
-    plt.grid(True)
-    
     plt.tight_layout()
     plt.show()

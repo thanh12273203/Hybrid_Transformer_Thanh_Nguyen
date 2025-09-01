@@ -237,11 +237,4 @@ class LGATrModel(nn.Module):
             x = x.view(B, -1)  # (B, 16)
             x = extract_vector(x)  # (B, 4)
 
-            # Convert to (pT, eta, phi, E)
-            pT = torch.sqrt(x[..., 1]**2 + x[..., 2]**2)
-            eta = torch.asinh(x[..., 3] / pT)
-            phi = torch.atan2(x[..., 2], x[..., 1])
-            energy = x[..., 0]
-            x = torch.stack([pT, eta, phi, energy], dim=-1)
-
             return x
