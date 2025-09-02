@@ -39,18 +39,18 @@ def _load_split(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Evaluate ParticleTransformer from YAML config')
+    parser = argparse.ArgumentParser(description="Evaluate ParticleTransformer from YAML config")
 
     # Model and configurations arguments
-    parser.add_argument('--config', type=str, default='./configs/train_LorentzParT.yaml', help='Path to YAML config')
-    parser.add_argument('--best-model', type=str, default='./logs/LorentzParT/best/pretrained_equilinear_clf.pt', help='Path to best model weights (.pt)')
-    parser.add_argument('--checkpoint', type=str, default=None, help='Checkpoint to restore trainer state')
+    parser.add_argument('--config', type=str, default='./configs/train_LorentzParT.yaml', help="Path to YAML config")
+    parser.add_argument('--best-model', type=str, default='./logs/LorentzParT/best/pretrained_equilinear_clf.pt', help="Path to best model weights (.pt)")
+    parser.add_argument('--checkpoint', type=str, default=None, help="Checkpoint to restore trainer state")
 
     # Data loading arguments
-    parser.add_argument('--data-root', type=str, default='./data', help='Dataset root folder')
-    parser.add_argument('--test-split', type=str, default='val_5M', help='Split to evaluate on')
-    parser.add_argument('--num-files', type=int, default=10, help='Limit number of ROOT files to read (0=all)')
-    parser.add_argument('--stride', type=int, default=5, help='Stride when selecting ROOT files')
+    parser.add_argument('--data-root', type=str, default='./data', help="Dataset root folder")
+    parser.add_argument('--test-split', type=str, default='val_5M', help="Split to evaluate on")
+    parser.add_argument('--num-files', type=int, default=10, help="Limit number of ROOT files to read (0=all)")
+    parser.add_argument('--stride', type=int, default=5, help="Stride when selecting ROOT files")
 
     return parser.parse_args()
 
@@ -85,8 +85,8 @@ def main() -> None:
 
     # Create the dataset
     if model_cfg.mask:
-        train_dataset = JetClassDataset(X_train, y_train, normalize, norm_dict, mask_mode='random')
-        val_dataset = JetClassDataset(X_val, y_val, normalize, norm_dict, mask_mode='random')
+        train_dataset = JetClassDataset(X_train, y_train, normalize, norm_dict, mask_mode='biased')
+        val_dataset = JetClassDataset(X_val, y_val, normalize, norm_dict, mask_mode='biased')
         test_dataset = JetClassDataset(X_test, y_test, normalize, norm_dict, mask_mode='first')
     else:
         train_dataset = JetClassDataset(X_train, y_train, normalize, norm_dict, mask_mode=None)

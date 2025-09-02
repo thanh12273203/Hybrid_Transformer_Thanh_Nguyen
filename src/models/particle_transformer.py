@@ -4,9 +4,8 @@ import torch
 from torch import nn, Tensor
 
 from .classifier import ClassAttentionBlock, Classifier
-from .embeddings import InteractionEmbedding
 from .feedforward import Feedforward
-from .processor import ParticleProcessor
+from .processor import InteractionEmbedding, ParticleProcessor
 from ..configs import ParticleTransformerConfig
 
 

@@ -3,7 +3,6 @@ from typing import List
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
-from lgatr.interface import extract_vector
 
 
 class ConservationLoss(nn.Module):

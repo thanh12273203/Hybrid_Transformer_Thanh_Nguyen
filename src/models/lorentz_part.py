@@ -6,9 +6,8 @@ from lgatr.interface import extract_vector
 from lgatr.layers import EquiLinear
 
 from .classifier import ClassAttentionBlock, Classifier
-from .embeddings import InteractionEmbedding
 from .particle_transformer import ParticleAttentionBlock
-from .processor import ParticleProcessor
+from .processor import InteractionEmbedding, ParticleProcessor
 from ..configs import LorentzParTConfig
 
 
@@ -18,7 +17,6 @@ class LorentzParTEncoder(nn.Module):
         embed_dim: int = 128,
         num_heads: int = 8,
         num_layers: int = 8,
-        same_equilinear: Optional[EquiLinear] = None,
         in_s_channels: Optional[int] = None,
         out_s_channels: Optional[int] = None,
         dropout: float = 0.1,
@@ -31,7 +29,7 @@ class LorentzParTEncoder(nn.Module):
             out_mv_channels=1,
             in_s_channels=in_s_channels,
             out_s_channels=out_s_channels
-        ) if same_equilinear is None else same_equilinear
+        )
         self.proj = nn.Linear(16, embed_dim)
         self.interaction_embed = InteractionEmbedding(
             num_interaction_features=4,
@@ -45,7 +43,6 @@ class LorentzParTEncoder(nn.Module):
                 expansion_factor=expansion_factor
             ) for _ in range(num_layers)
         ])
-        self.linear = nn.Linear(embed_dim, 16)
     
     def forward(self, x: Tensor, padding_mask: Tensor, U: Tensor) -> Tensor:
         B, N, F = x.shape  # (batch_size, max_num_particles, num_particle_features)
@@ -99,7 +96,7 @@ class LorentzParT(nn.Module):
     dropout: float, optional
         Dropout rate for the model.
     expansion_factor: int, optional
-        Expansion factor for the feedforward layers in ParticleTransformerEncoder.
+        Expansion factor for the feedforward layers in LorentzParTEncoder.
     pair_embed_dims: List[int], optional
         Dimensionality of the pair embeddings for the interaction features.
     mask: bool, optional
@@ -211,17 +208,10 @@ class LorentzParT(nn.Module):
         nn.init.normal_(self.cls_token, mean=0.0, std=1.0)
 
         self.processor = ParticleProcessor(to_multivector=True)
-        self.equilinear = EquiLinear(
-            in_mv_channels=1,
-            out_mv_channels=1,
-            in_s_channels=self.in_s_channels,
-            out_s_channels=self.out_s_channels
-        )
         self.encoder = LorentzParTEncoder(
             embed_dim=self.embed_dim,
             num_heads=self.num_heads,
             num_layers=self.num_layers,
-            same_equilinear=None,#self.equilinear,
             in_s_channels=self.in_s_channels,
             out_s_channels=self.out_s_channels,
             dropout=self.dropout,
@@ -231,6 +221,12 @@ class LorentzParT(nn.Module):
 
         # For self-supervised learning
         self.fc = nn.Linear(self.max_num_particles * self.embed_dim, 16)
+        self.equilinear = EquiLinear(
+            in_mv_channels=1,
+            out_mv_channels=1,
+            in_s_channels=self.in_s_channels,
+            out_s_channels=self.out_s_channels
+        )
 
         # For classification
         self.decoder = nn.ModuleList([
