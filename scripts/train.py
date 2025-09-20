@@ -114,7 +114,8 @@ if __name__ == '__main__':
     if world_size > 1:
         mp.spawn(
             main,
-            args(
+            args=(
+                world_size,
                 args.config_path,
                 args.checkpoint_path,
                 args.train_data_dir,

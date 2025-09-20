@@ -112,7 +112,7 @@ class JetClassDataset(Dataset):
         valid_idx = np.where(np.any(particles != 0, axis=1))[0]
         
         if mode == 'random':
-            mask_idx = np.random.choice(valid_idx)
+            mask_idx = np.array([np.random.choice(valid_idx)])
         elif mode == 'biased':
             total = np.sum(1 / (np.arange(0, particles.shape[0]) + 1))
             mask_idx = 127

@@ -1,20 +1,26 @@
 #!/bin/bash
 #SBATCH -A m4392
 #SBATCH -C gpu
-#SBATCH -N 2
+#SBATCH -N 1
 #SBATCH -q debug
-#SBATCH -t 48:00:00
+#SBATCH -t 00:30:00
 #SBATCH --ntasks-per-node 1
 #SBATCH --gpus-per-task 4
-#SBATCH --cpus-per-task 64
+#SBATCH --cpus-per-task 16
 #SBATCH --image=docker:thanh12273203/gsoc25_cms:latest
 #SBATCH --output=/pscratch/sd/t/thanh/logs/slurm-%j.out
 #SBATCH --error=/pscratch/sd/t/thanh/logs/slurm-%j.out
 #SBATCH --mail-user=tpnguyen8@crimson.ua.edu
 #SBATCH --mail-type=ALL
 
-nvidia-smi
-export CUDA_VISIBLE_DEVICES=0, 1, 2, 3
+echo "Node list: $SLURM_NODELIST"
+nvidia-smi || true
+
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 export CUDA_LAUNCH_BLOCKING=1
 export TORCH_DISTRIBUTED_DEBUG=INFO
-srun --unbuffered --export=ALL shifter python -m scripts.train
+
+srun --unbuffered --export=ALL shifter python -m scripts.train \
+    --config-path ./configs/train_LorentzParT.yaml \
+    --train-data-dir ./data/train_100M \
+    --val-data-dir ./data/val_5M

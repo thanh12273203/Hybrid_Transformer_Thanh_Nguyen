@@ -108,7 +108,7 @@ if __name__ == '__main__':
     if world_size > 1:
         mp.spawn(
             main,
-            args(
+            args=(
                 args.config_path,
                 args.best_model_path,
                 args.test_data_dir
