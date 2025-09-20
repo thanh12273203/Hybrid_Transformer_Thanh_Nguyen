@@ -1,3 +1,4 @@
-from .dataloader import read_file
+from .dataloader import load_npy_data, read_file
+from .get_datasets import download_jetclass_data, extract_tar
 from .jetclass import JetClassDataset
 from .normalize import compute_norm_stats

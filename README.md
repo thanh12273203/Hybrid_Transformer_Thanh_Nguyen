@@ -1,6 +1,6 @@
 # Event Classification with Masked Transformer Autoencoders <img src='assets/pics/gsoc_icon.png' alt="GSoC" width='30'/>
 
-A Particle Transformer model with EquiLinear layers for jet physics tasks on JetClass dataset, including jet classification and masked particle reconstruction with momentum-conservation losses.
+LorentzParT, a Particle Transformer model with LGATr's EquiLinear layers for jet physics tasks on JetClass dataset, including jet classification and masked particle reconstruction with momentum-conservation losses.
 
 ## Overview
 
@@ -12,7 +12,7 @@ High-energy physics jets are complex objects composed of many particles. This re
 *Cutaway diagram of CMS detector (retrieved from https://cds.cern.ch/record/2665537/files/)*
 
 Core components:
-- Models: `ParticleTransformer` with `EquiLinear` layers.
+- Models: `LorentzParT`, a `ParticleTransformer` with `EquiLinear` layers from `LGATr`.
 - Engine: Training/eval loops, logging, checkpointing (see `src/engine/trainer.py`)
 - Configs: YAML-driven experiment config (see `configs/`)
 - Datasets: Utilities for loading the ROOT files from JetClass dataset (see `src/utils/data`)
@@ -102,23 +102,69 @@ train:
         kwargs: {gamma: 0.95}
     num_epochs: 20
     logging_dir: logs
-    device: cuda
 ```
 
 Model and training configs are parsed and fed into the trainers.
 
 ## Train and Evaluate
 
-**TODO**: Write Python scripts for HPC.
+Two lightweight CLI scripts are provided under `scripts/` and use YAML experiment definitions:
+
+- Training: `scripts/train.py` — trains a `LorentzParT` model defined by the YAML config and saves logs/weights
+- Evaluation: `scripts/evaluate.py` — loads a trained model and runs evaluation/visualization on a test split
+
+Both scripts support single-GPU / CPU runs and will spawn processes for multi-GPU (DDP) when multiple CUDA devices are visible.
+
+Train usage (example):
+
+```bash
+# single-GPU or CPU
+python -m scripts.train \
+    --config-path ./configs/train_LorentzParT.yaml \
+    --checkpoint-path /logs/LorentzParT/checkpoints/run_01.pt \
+    --train-data-dir ./data/train_100M \
+    --val-data-dir ./data/val_5M
+```
+
+Key flags for `scripts/train.py`:
+- `--config-path`: Path to the YAML experiment (default: `./configs/train_LorentzParT.yaml`)
+- `--checkpoint-path`: Optional trainer checkpoint to resume from
+- `--train-data-dir`: Directory with training ROOT files
+- `--val-data-dir`: Directory with validation ROOT files
+
+Notes:
+- The script reads `model` and `train` sections from the YAML and constructs a `LorentzParT` model and a `Trainer` or `MaskedModelTrainer` depending on `model.mask`.
+- For multi-GPU runs the script will call `torch.multiprocessing.spawn` using `torch.cuda.device_count()` processes.
+
+Evaluate usage (example):
+
+```bash
+# single-GPU or CPU
+python -m scripts.evaluate \
+    --config-path ./configs/train_LorentzParT.yaml \
+    --best-model-path ./logs/LorentzParT/best/run_01.pt \
+    --test-data-dir ./data/test_20M
+```
+
+Key flags for `scripts/evaluate.py`:
+- `--config-path`: Path to the YAML experiment (default: `./configs/train_LorentzParT.yaml`)
+- `--best-model-path`: Path to saved best model weights used for evaluation
+- `--test-data-dir`: Directory with test ROOT files
+
+Notes:
+- `evaluate.py` builds a `Trainer`/`MaskedModelTrainer` using the same YAML and will call `trainer.evaluate(...)`.
+- For classification mode (`model.mask == False`) the script will call `trainer.evaluate` with plotting helpers such as `plot_roc_curve` and `plot_confusion_matrix` (see `src/utils/viz.py`).
+- For masked/self-supervised mode the script uses `plot_particle_reconstruction` to visualize reconstructions.
+- The evaluation script also supports multi-GPU via DDP spawn.
 
 ## Model and Losses
 
-- `src/models/particle_transformer.py`: Particle Transformer backbone and heads
-- `src/loss/`: Losses including `conservation_loss` for masked reconstruction
+- `src/models/lorentz_part.py`: `ParticleTransformer` backbone and heads combined with `EquiLinear` layers from `LGATr`.
+- `src/loss/`: Losses including `ConservationLoss` for masked reconstruction.
 
 ## Notebooks
 
-See `notebooks/01_ParT_demo.ipynb` for a quick, interactive demonstration of loading data and running the model.
+See `notebooks/01_LorentzParT_demo.ipynb` for a quick, interactive demonstration of loading data and running the model.
 
 ## Testing
 
@@ -145,8 +191,3 @@ Hybrid_Transformer_Thanh_Nguyen/
 ├── data/                  # ROOT files (train/val/test splits)
 └── assets/                # Figures and demo assets
 ```
-
-## Notes
-
-- Device selection is controlled by the YAML (`train.device`) and falls back to CUDA if available.
-- YAML values should retain their numeric types; if you edit configs programmatically, ensure numbers aren’t coerced to strings (e.g., learning rates).

@@ -272,6 +272,6 @@ class ParticleTransformer(nn.Module):
             return output
         else:
             x = x.view(B, -1)  # (B, N * embed_dim)
-            x = self.fc(x)  # (B, num_particle_features)
+            x = self.fc(x)  # (B, F)
 
             return x

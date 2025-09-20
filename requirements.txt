@@ -123,8 +123,8 @@ tensorboard-data-server==0.7.2
 terminado==0.18.1
 threadpoolctl==3.6.0
 tinycss2==1.4.0
-torch==2.7.1+cu128
-torchvision==0.22.1+cu128
+torch==2.8.0+cu129
+torchvision==0.23.0+cu129
 tornado==6.5.1
 tqdm==4.67.1
 traitlets==5.14.3

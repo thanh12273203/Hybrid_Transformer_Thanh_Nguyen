@@ -23,7 +23,7 @@ def plot_feature_distribution(X_jets: np.ndarray) -> None:
 
 
 # Function to visualize the particle features reconstruction
-def plot_particle_reconstruction(y_true: np.ndarray, y_pred: np.ndarray) -> None:
+def plot_particle_reconstruction(y_true: np.ndarray, y_pred: np.ndarray, save_fig: Optional[str] = None) -> None:
     pT_true, eta_true, phi_true, E_true = y_true[:, 0], y_true[:, 1], y_true[:, 2], y_true[:, 3]
     pT_pred, eta_pred, phi_pred, E_pred = y_pred[:, 0], y_pred[:, 1], y_pred[:, 2], y_pred[:, 3]
 
@@ -82,11 +82,15 @@ def plot_particle_reconstruction(y_true: np.ndarray, y_pred: np.ndarray) -> None
     plt.ylim(E_min, E_max)
     
     plt.tight_layout()
-    plt.show()
+
+    if save_fig:
+        plt.savefig(save_fig, dpi=300)
+    else:
+        plt.show()
 
 
 # Function to visualize the training progress
-def plot_history(history: Dict[str, List[float]]) -> None:
+def plot_history(history: Dict[str, List[float]], save_fig: Optional[str] = None) -> None:
     plt.figure(figsize=(12, 5))
     epochs = history['epoch']
 
@@ -111,11 +115,15 @@ def plot_history(history: Dict[str, List[float]]) -> None:
     plt.grid(True)
 
     plt.tight_layout()
-    plt.show()
+
+    if save_fig:
+        plt.savefig(save_fig, dpi=300)
+    else:
+        plt.show()
 
 
 # Function to visualize the confusion matrix
-def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, labels: Optional[List[str]] = None) -> None:
+def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, labels: Optional[List[str]] = None, save_fig: Optional[str] = None) -> None:
     y_true_classes = np.argmax(y_true, axis=1)
     y_pred_classes = np.argmax(y_pred, axis=1)
     cm = confusion_matrix(y_true_classes, y_pred_classes,labels=np.arange(y_true.shape[1]))
@@ -141,11 +149,15 @@ def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, labels: Option
     plt.ylabel("Actual")
     plt.title("Confusion Matrix")
     plt.tight_layout()
-    plt.show()
+
+    if save_fig:
+        plt.savefig(save_fig, dpi=300)
+    else:
+        plt.show()
 
 
 # Function to visualize the ROC curve
-def plot_roc_curve(y_true: np.ndarray, y_pred_prob: np.ndarray) -> None:
+def plot_roc_curve(y_true: np.ndarray, y_pred_prob: np.ndarray, save_fig: Optional[str] = None) -> None:
     # Convert one-hot encoded y_true to class indices if needed
     if y_true.ndim > 1 and y_true.shape[1] > 1:
         y_true_indices = np.argmax(y_true, axis=1)
@@ -189,4 +201,8 @@ def plot_roc_curve(y_true: np.ndarray, y_pred_prob: np.ndarray) -> None:
     plt.title("Macro-Average ROC Curve")
     plt.legend(loc='lower right')
     plt.tight_layout()
-    plt.show()
+
+    if save_fig:
+        plt.savefig(save_fig, dpi=300)
+    else:
+        plt.show()

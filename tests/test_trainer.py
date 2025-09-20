@@ -11,14 +11,10 @@ import torch
 from src.configs import ParticleTransformerConfig, TrainConfig
 from src.models import ParticleTransformer
 from src.engine import Trainer
-from src.utils import EarlyStopping
+from src.utils import set_seed
 from src.utils.data import JetClassDataset
 
-np.random.seed(42)
-torch.manual_seed(42)
-torch.cuda.manual_seed_all(42)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+set_seed(42)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -72,10 +68,6 @@ def make_train_config(temp_log_dir: str, **overrides: Dict) -> TrainConfig:
         'optimizer': {
             'name': 'adamw',
             'kwargs': {'lr': 1e-3}
-        },
-        'scheduler': {
-            'name': 'exponential_lr',
-            'kwargs': {'gamma': 0.95}
         },
         'num_epochs': 2,
         'start_epoch': 0,
@@ -149,6 +141,7 @@ def test_trainer_train_loop_and_history(dummy_dataset: Tuple, temp_dir: str):
         train_dataset=train_set,
         val_dataset=val_set,
         test_dataset=test_set,
+        device=device,
         config=train_config
     )
 
@@ -187,6 +180,7 @@ def test_trainer_optimizer_config(dummy_dataset: Tuple, temp_dir: str):
         train_dataset=train_set,
         val_dataset=val_set,
         test_dataset=test_set,
+        device=device,
         config=train_config
     )
 
@@ -210,14 +204,22 @@ def test_trainer_callbacks_and_early_stopping(dummy_dataset: Tuple, temp_dir: st
     train_config = make_train_config(temp_dir)
 
     # EarlyStopping callback with patience=0 for immediate stop
-    early_stop = EarlyStopping(monitor='val_loss', patience=0)
+    callbacks = [{
+        'name': 'early_stopping',
+        'kwargs': {
+            'monitor': 'val_loss',
+            'mode': 'min',
+            'patience': 5
+        }
+    }]
     trainer = Trainer(
         model=model,
         train_dataset=train_set,
         val_dataset=val_set,
         test_dataset=test_set,
+        device=device,
         config=train_config,
-        callbacks=[early_stop]
+        callbacks=callbacks
     )
     history, _ = trainer.train()
 
@@ -247,6 +249,7 @@ def test_trainer_device(dummy_dataset: Tuple, temp_dir: str):
         train_dataset=train_set,
         val_dataset=val_set,
         test_dataset=test_set,
+        device=device,
         config=train_config
     )
 

@@ -20,7 +20,7 @@ model:
     num_particle_features: 4
     pair_embed_dims: [64, 64, 64]
     mask: False
-    weights: 'logs/LorentzParT/best/pretrained_equilinear_clf.pt'
+    weights: 
     inference: False
 
 
@@ -43,8 +43,14 @@ train:
         name: 'exponential_lr'
         kwargs:
             gamma: 0.95
-            factor: 0.5
-            patience: 5
+    callbacks:
+        # All supported callbacks can be found in 'src/utils/callbacks.py'
+        - name: 'early_stopping'
+          kwargs:
+              monitor: 'val_loss'  # 'val_loss' or 'val_acc'
+              mode: 'min'  # 'min' or 'max'
+              patience: 5
+              min_delta: 0.001
     num_epochs: 20
     start_epoch: 0
     logging_dir: 'logs'
@@ -52,6 +58,6 @@ train:
     progress_bar: False
     save_best: True
     save_ckpt: True
-    device: 'cuda'  # 'cuda' or 'cpu'
-    num_workers: 0
+    save_fig: True
+    num_workers: 4
     pin_memory: True

@@ -5,13 +5,11 @@ import pytest
 import torch
 from torch import Tensor
 
-from src.models import LGATrModel
+from src.models import LorentzGATr
 from src.configs import LGATrConfig
+from src.utils import set_seed
 
-torch.manual_seed(42)
-torch.cuda.manual_seed_all(42)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+set_seed(42)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -26,10 +24,10 @@ def dummy_data() -> Dict[str, Tensor]:
     # Simulated particle features: shape (B, N, F)
     x = torch.randn(batch_size, max_num_particles, num_particle_features)
 
-    # For LGATrModel: output classification
+    # For LorentzGATr: output classification
     y = torch.randint(0, num_classes, (batch_size, num_classes))
 
-    # For LGATrModel: masked particles' indices
+    # For LorentzGATr: masked particles' indices
     mask_idx = torch.randint(0, max_num_particles, (batch_size, 1))
 
     return {
@@ -82,7 +80,7 @@ def test_lgatr_forward(dummy_data: Dict[str, Tensor]):
         num_layers=2,
         num_cls_layers=1,
     )
-    model = LGATrModel(config=config).to(device)
+    model = LorentzGATr(config=config).to(device)
     x = dummy_data['x']
 
     output = model(x.to(device))
@@ -101,7 +99,7 @@ def test_masked_lgatr_forward(dummy_data: Dict[str, Tensor]):
         num_layers=2,
         mask=True
     )
-    model = LGATrModel(config=config).to(device)
+    model = LorentzGATr(config=config).to(device)
     x = dummy_data['x']
     mask_idx = dummy_data['mask_idx']
 
@@ -122,7 +120,7 @@ def test_lgatr_batch_first(dummy_data: Dict[str, Tensor]):
         num_layers=2,
         num_cls_layers=1,
     )
-    model = LGATrModel(config=config).to(device)
+    model = LorentzGATr(config=config).to(device)
     x = dummy_data['x']
     output = model(x.to(device))
 
@@ -139,7 +137,7 @@ def test_masked_lgatr_grad(dummy_data: Dict[str, Tensor]):
         num_layers=2,
         mask=True
     )
-    model = LGATrModel(config=config).to(device)
+    model = LorentzGATr(config=config).to(device)
     x = dummy_data['x'].requires_grad_()
     mask_idx = dummy_data['mask_idx']
     output = model(x.to(device), mask_idx)

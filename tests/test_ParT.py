@@ -7,11 +7,9 @@ from torch import Tensor
 
 from src.models import ParticleTransformer
 from src.configs import ParticleTransformerConfig
+from src.utils import set_seed
 
-torch.manual_seed(42)
-torch.cuda.manual_seed_all(42)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+set_seed(42)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 

@@ -8,7 +8,6 @@ import vector
 vector.register_awkward()
 
 
-# Function to read a single ROOT file from the JetClass dataset
 def read_file(
     filepath: str,
     max_num_particles: int = 128,
@@ -124,3 +123,20 @@ def read_file(
     y = np.stack([ak.to_numpy(table[n]).astype('int') for n in labels], axis=1)
 
     return x_particles, x_jets, y
+
+
+def load_npy_data(data_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    filepaths = [f for f in os.listdir(data_dir) if f.endswith('.root')]
+    all_xp, all_xj, all_y = [], [], []
+
+    for fname in filepaths:
+        xp, xj, y = read_file(os.path.join(data_dir, fname))
+        all_xp.append(xp)
+        all_xj.append(xj)
+        all_y.append(y)
+        
+    X_particles = np.concatenate(all_xp, axis=0)
+    X_jets = np.concatenate(all_xj, axis=0)
+    y = np.concatenate(all_y, axis=0)
+    
+    return X_particles, X_jets, y

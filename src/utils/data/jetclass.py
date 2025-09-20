@@ -70,10 +70,12 @@ class JetClassDataset(Dataset):
 
             # Normalize features (in-place)
             feature_names = ['pT', 'eta', 'phi', 'energy']
+
             if self.norm_dict is not None:
                 for i, feature in enumerate(feature_names):
                     if self.normalize[i]:
                         mean, std = self.norm_dict[feature]
+
                         if i == 0 or i == 3:  # pT or energy where values are strictly positive
                             masked_particles[:, i] = masked_particles[:, i] / mean
                             masked_targets[:, i] = masked_targets[:, i] / mean
@@ -95,6 +97,7 @@ class JetClassDataset(Dataset):
                 for i, feature in enumerate(feature_names):
                     if self.normalize[i]:
                         mean, std = self.norm_dict[feature]
+
                         if i == 0 or i == 3:  # pT or energy where values are strictly positive
                             particles[:, i] = particles[:, i] / mean
                         else:
@@ -114,10 +117,12 @@ class JetClassDataset(Dataset):
             total = np.sum(1 / (np.arange(0, particles.shape[0]) + 1))
             mask_idx = 127
             u, w = 0, 1
+
             while (u < w) or (mask_idx not in valid_idx):
                 u = np.random.uniform(0, 1)
                 mask_idx = np.random.randint(0, particles.shape[0])
                 w = (1 / (mask_idx + 1)) / total
+                
             mask_idx = np.array([mask_idx])
         elif mode == 'first':
             mask_idx = valid_idx[:1]

@@ -294,6 +294,6 @@ class LorentzParT(nn.Module):
             x = x.view(B, 1, 1, 16)
             x, _ = self.equilinear(x)  # (B, 1, 1, 16)
             x = x.view(B, 16)
-            x = extract_vector(x)  # (B, 4)
+            x = extract_vector(x)  # (B, F)
 
             return x
