@@ -8,7 +8,7 @@ from src.configs import LorentzParTConfig, TrainConfig
 from src.engine import Trainer, MaskedModelTrainer
 from src.models import LorentzParT
 from src.utils import accuracy_metric_ce, set_seed, setup_ddp, cleanup_ddp
-from src.utils.data import JetClassDataset, compute_norm_stats, load_npy_data
+from src.utils.data import JetClassDataset, compute_norm_stats, build_memmap_data, load_memmap_data
 from src.utils.viz import plot_particle_reconstruction, plot_confusion_matrix, plot_roc_curve
 
 
@@ -44,7 +44,7 @@ def main(
     setup_ddp(rank, world_size)
 
     # Read in the data
-    X_test, _, y_test = load_npy_data(test_data_dir)
+    X_test, y_test = load_memmap_data(test_data_dir, prefix='test')
     normalize = [True, False, False, True]
     norm_dict = compute_norm_stats(X_test)
 
@@ -102,6 +102,9 @@ if __name__ == '__main__':
 
     # Reproducibility settings
     set_seed(42)
+
+    # Build memory-mapped data files if they do not exist
+    build_memmap_data(args.test_data_dir, prefix='test')
 
     # Multi-GPU processing
     world_size = torch.cuda.device_count()

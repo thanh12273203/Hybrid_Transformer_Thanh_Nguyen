@@ -140,3 +140,41 @@ def load_npy_data(data_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     y = np.concatenate(all_y, axis=0)
     
     return X_particles, X_jets, y
+
+
+def build_memmap_data(data_dir: str, prefix: str) -> Tuple[str, str]:
+    particles_path = os.path.join(data_dir, f"{prefix}_particles.npy")
+    labels_path = os.path.join(data_dir, f"{prefix}_labels.npy")
+
+    # Avoid rebuilding if the files already exist
+    if os.path.exists(particles_path) and os.path.exists(labels_path):
+        return particles_path, labels_path
+
+    file_names = [name for name in os.listdir(data_dir) if name.endswith('.root')]
+    particle_arrays = []
+    label_arrays = []
+    for file_name in sorted(file_names):
+        particle_array, jet_array, label_array = read_file(os.path.join(data_dir, file_name))
+        particle_arrays.append(particle_array)
+        label_arrays.append(label_array)
+
+    combined_particles = np.concatenate(particle_arrays, axis=0)
+    combined_labels = np.concatenate(label_arrays, axis=0)
+    np.save(particles_path, combined_particles)
+    np.save(labels_path, combined_labels)
+
+    return particles_path, labels_path
+
+
+def load_memmap_data(data_dir: str, prefix: str) -> Tuple[np.memmap, np.memmap]:
+    particles_file = os.path.join(data_dir, f"{prefix}_particles.npy")
+    labels_file = os.path.join(data_dir, f"{prefix}_labels.npy")
+    if not os.path.exists(particles_file) or not os.path.exists(labels_file):
+        raise FileNotFoundError(
+            f"Memmap files {particles_file} or {labels_file} not found; "
+            f"run build_memmap_data(data_dir, '{prefix}') first."
+        )
+    particles_memmap = np.load(particles_file, mmap_mode='r')
+    labels_memmap = np.load(labels_file, mmap_mode='r')
+    
+    return particles_memmap, labels_memmap

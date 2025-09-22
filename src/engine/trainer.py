@@ -223,8 +223,8 @@ class Trainer:
         # Subfolders
         self.best_models_dir = os.path.join(self.log_dir, 'best')
         self.checkpoints_dir = os.path.join(self.log_dir, 'checkpoints')
-        self.loggings_dir = os.path.join(self.log_dir, 'loggings')
-        self.outputs_dir = os.path.join(self.log_dir, 'outputs')
+        self.loggings_dir = os.path.join(self.log_dir, 'logging')
+        self.outputs_dir = os.path.join(self.log_dir, 'output')
         os.makedirs(self.best_models_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.loggings_dir, exist_ok=True)

@@ -5,7 +5,6 @@ import numpy as np
 from tqdm.auto import tqdm
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 from torch.distributed import all_gather, all_gather_object
 from torch.utils.data.distributed import DistributedSampler
