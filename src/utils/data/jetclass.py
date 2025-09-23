@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
 import numpy as np
 
@@ -26,7 +26,7 @@ class JetClassDataset(Dataset):
 
     Returns
     -------
-    Tuple[Tensor, Tensor, Tensor]
+    Tuple[Tensor, ...]
         For self-supervised learning: a tuple containing the following elements:
         - The masked particle features tensor of shape (max_num_particles, num_particle_features).
         - The masked target labels tensor of shape (num_particle_features,).
@@ -62,7 +62,7 @@ class JetClassDataset(Dataset):
     def __len__(self) -> int:
         return len(self.X_particles)
 
-    def __getitem__(self, idx: int) -> Tuple[Tensor]:
+    def __getitem__(self, idx: int) -> Tuple[Tensor, ...]:
         particles = self.X_particles[idx].T  # (max_num_particles, num_particle_features)
 
         if self.mask_mode is not None:

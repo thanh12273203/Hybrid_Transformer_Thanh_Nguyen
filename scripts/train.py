@@ -53,7 +53,7 @@ def main(
     X_val, y_val = load_memmap_data(val_data_dir, prefix='val')
     normalize = [True, False, False, True]
     if rank == 0:
-        norm_dict = compute_norm_stats(X_train)
+        norm_dict = compute_norm_stats(X_val)
     else:
         norm_dict = None
     

@@ -2,16 +2,16 @@
 #SBATCH -A m4392
 #SBATCH -C gpu
 #SBATCH -N 1
-#SBATCH -q regular
-#SBATCH -t 48:00:00
+#SBATCH -q debug
+#SBATCH -t 00:30:00
 #SBATCH --ntasks-per-node 1
 #SBATCH --gpus-per-task 4
 #SBATCH --cpus-per-task 64
 #SBATCH --image=docker:thanh12273203/gsoc25_cms:latest
 #SBATCH --output=/pscratch/sd/t/thanh/logs/slurm-%j.out
 #SBATCH --error=/pscratch/sd/t/thanh/logs/slurm-%j.out
-##SBATCH --mail-user=tpnguyen8@crimson.ua.edu
-##SBATCH --mail-type=ALL
+#SBATCH --mail-user=tpnguyen8@crimson.ua.edu
+#SBATCH --mail-type=ALL
 
 echo "Node list: $SLURM_NODELIST"
 nvidia-smi || true
