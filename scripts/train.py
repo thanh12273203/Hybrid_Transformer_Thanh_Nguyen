@@ -46,6 +46,7 @@ def main(
     setup_ddp(rank, world_size)
 
     # Read in the data
+    print(f"Rank {rank}: Loading data...")
     X_train, y_train = load_memmap_data(train_data_dir, prefix='train')
     X_val, y_val = load_memmap_data(val_data_dir, prefix='val')
     normalize = [True, False, False, True]
@@ -68,8 +69,8 @@ def main(
         val_dataset = JetClassDataset(X_val, y_val, normalize, norm_dict, mask_mode=None)
 
     # Initialize the model
-    device = torch.device(f'cuda:{rank}' if torch.cuda.is_available() else 'cpu')
-    model = LorentzParT(config=model_config).to(device)
+    print(f"Rank {rank}: Initializing model...")
+    model = LorentzParT(config=model_config).to(rank)
 
     # Initialize the trainer
     if model_config.mask:
@@ -77,7 +78,7 @@ def main(
             model=model,
             train_dataset=train_dataset,
             val_dataset=val_dataset,
-            device=device,
+            device=rank,
             config=train_config
         )
     else:
@@ -100,6 +101,7 @@ def main(
             print(f"Error loading checkpoint: {e}")
 
     # Train the model
+    print(f"Rank {rank}: Starting training...")
     history, model = trainer.train()
 
     # Clean up distributed processing

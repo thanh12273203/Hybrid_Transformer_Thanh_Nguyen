@@ -63,7 +63,7 @@ def main(
         test_dataset = JetClassDataset(X_test, y_test, normalize, norm_dict, mask_mode=None)
 
     # Initialize the model
-    device = torch.device(f'cuda:{rank}' if torch.cuda.is_available() else 'cpu')
+    device = rank if torch.cuda.is_available() else torch.device('cpu')
     model = LorentzParT(config=model_config).to(device)
 
     # Trainer stub for evaluation convenience

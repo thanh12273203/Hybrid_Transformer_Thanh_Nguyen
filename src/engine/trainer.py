@@ -26,7 +26,8 @@ from ..utils import (
     get_loss_from_config,
     get_optim_from_config,
     get_scheduler_from_config,
-    get_callbacks_from_config
+    get_callbacks_from_config,
+    cleanup_ddp
 )
 from ..utils.viz import *
 
@@ -45,7 +46,7 @@ class Trainer:
         The dataset to use for validation.
     test_dataset: Dataset, optional
         The dataset to use for testing.
-    device: torch.device, optional
+    device: torch.device or int, optional
         Device to run the training on. Overrides config if provided.
     metric: Callable, optional
         A function to compute a metric for evaluation.
@@ -90,7 +91,7 @@ class Trainer:
         train_dataset: Dataset,
         val_dataset: Dataset,
         test_dataset: Optional[Dataset] = None,
-        device: Optional[torch.device] = None,
+        device: Optional[Union[torch.device, int]] = None,
         metric: Optional[Callable] = None,
         config: Optional[TrainConfig] = None,
         # Parameters below can override config if supplied explicitly
@@ -122,18 +123,18 @@ class Trainer:
             self.device = device
         else:
             if torch.cuda.is_available():
-                self.device = torch.device(f'cuda:{self.rank}')
+                self.device = self.rank
             else:
                 self.device = torch.device('cpu')
 
         # Prepare the model for multi-GPU training if available
         self.model = model.to(self.device)
-        self._is_distributed = (self.world_size > 1 and self.device.type == 'cuda')
+        self._is_distributed = self.world_size > 1
         if self._is_distributed:
             self.model = DDP(
                 module=self.model,
-                device_ids=[self.device.index],
-                output_device=self.device.index
+                device_ids=[self.device],
+                output_device=self.device
             )
 
         # Use config if provided, otherwise use defaults
@@ -468,6 +469,7 @@ class Trainer:
         except KeyboardInterrupt:
             print(f"\nTraining interrupted at epoch {epoch + 1}. Saving current checkpoint.")
             self.save_checkpoint(epoch)
+            cleanup_ddp()
 
         return self.history, self.model
     

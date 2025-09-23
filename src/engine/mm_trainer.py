@@ -10,6 +10,7 @@ from torch.distributed import all_gather, all_gather_object
 from torch.utils.data.distributed import DistributedSampler
 
 from .trainer import Trainer
+from ..utils import cleanup_ddp
 from ..utils.viz import *
 
 
@@ -27,7 +28,7 @@ class MaskedModelTrainer(Trainer):
         The dataset to use for validation.
     test_dataset: Dataset, optional
         The dataset to use for testing.
-    device: torch.device, optional
+    device: torch.device or int, optional
         Device to run the training on. Overrides config if provided.
     metric: Callable, optional
         A function to compute a metric for evaluation.
@@ -262,6 +263,7 @@ class MaskedModelTrainer(Trainer):
         except KeyboardInterrupt:
             print(f"\nTraining interrupted at epoch {epoch + 1}. Saving current checkpoint.")
             self.save_checkpoint(epoch)
+            cleanup_ddp()
 
         return self.history, self.model
 

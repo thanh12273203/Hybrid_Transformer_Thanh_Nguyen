@@ -10,8 +10,8 @@
 #SBATCH --image=docker:thanh12273203/gsoc25_cms:latest
 #SBATCH --output=/pscratch/sd/t/thanh/logs/slurm-%j.out
 #SBATCH --error=/pscratch/sd/t/thanh/logs/slurm-%j.out
-#SBATCH --mail-user=tpnguyen8@crimson.ua.edu
-#SBATCH --mail-type=ALL
+##SBATCH --mail-user=tpnguyen8@crimson.ua.edu
+##SBATCH --mail-type=ALL
 
 echo "Node list: $SLURM_NODELIST"
 nvidia-smi || true
