@@ -25,7 +25,7 @@ model:
 
 
 train:
-    batch_size: 512
+    batch_size: 256
     criterion:
         # All supported loss functions can be found in 'src/loss/loss_registry.py'
         name: 'conservation_loss'
@@ -51,11 +51,11 @@ train:
               mode: 'min'  # 'min' or 'max'
               patience: 5
               min_delta: 0.001
-    num_epochs: 1
+    num_epochs: 20
     start_epoch: 0
     logging_dir: 'logs'
     logging_steps: 1000
-    progress_bar: True
+    progress_bar: False
     save_best: True
     save_ckpt: True
     save_fig: True

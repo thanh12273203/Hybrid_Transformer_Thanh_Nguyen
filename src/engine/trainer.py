@@ -134,7 +134,9 @@ class Trainer:
             self.model = DDP(
                 module=self.model,
                 device_ids=[self.device],
-                output_device=self.device
+                output_device=self.device,
+                find_unused_parameters=True,
+                gradient_as_bucket_view=True
             )
 
         # Use config if provided, otherwise use defaults
@@ -216,7 +218,11 @@ class Trainer:
         self.best_val_loss = min(self.history['val_loss']) if self.history['val_loss'] else float('inf')
 
         # Initialize the logging directory
-        self.model_name = self.model.__class__.__name__
+        if isinstance(self.model, DDP):
+            self.model_name = self.model.module.__class__.__name__
+        else:
+            self.model_name = self.model.__class__.__name__
+            
         os.makedirs(self.logging_dir, exist_ok=True)
         self.log_dir = os.path.join(self.logging_dir, self.model_name)
         os.makedirs(self.log_dir, exist_ok=True)

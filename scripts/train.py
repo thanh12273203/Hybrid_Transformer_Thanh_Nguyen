@@ -1,6 +1,7 @@
 import os
 import yaml
 import argparse
+import warnings
 
 import torch
 import torch.multiprocessing as mp
@@ -10,7 +11,9 @@ from src.engine import Trainer, MaskedModelTrainer
 from src.models import LorentzParT
 from src.utils import accuracy_metric_ce, set_seed, setup_ddp, cleanup_ddp
 from src.utils.data import JetClassDataset, compute_norm_stats, build_memmap_data, load_memmap_data
-from src.utils.viz import plot_history
+from src.utils.viz import plot_history, plot_ssl_history
+
+warnings.filterwarnings('ignore')
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,7 +49,6 @@ def main(
     setup_ddp(rank, world_size)
 
     # Read in the data
-    print(f"Rank {rank}: Loading data...")
     X_train, y_train = load_memmap_data(train_data_dir, prefix='train')
     X_val, y_val = load_memmap_data(val_data_dir, prefix='val')
     normalize = [True, False, False, True]
@@ -69,7 +71,6 @@ def main(
         val_dataset = JetClassDataset(X_val, y_val, normalize, norm_dict, mask_mode=None)
 
     # Initialize the model
-    print(f"Rank {rank}: Initializing model...")
     model = LorentzParT(config=model_config).to(rank)
 
     # Initialize the trainer
@@ -86,7 +87,7 @@ def main(
             model=model,
             train_dataset=train_dataset,
             val_dataset=val_dataset,
-            device=device,
+            device=rank,
             metric=accuracy_metric_ce,
             config=train_config
         )
@@ -101,7 +102,6 @@ def main(
             print(f"Error loading checkpoint: {e}")
 
     # Train the model
-    print(f"Rank {rank}: Starting training...")
     history, model = trainer.train()
 
     # Clean up distributed processing
@@ -109,7 +109,10 @@ def main(
 
     # Save the training history plot
     output_path = os.path.join(trainer.outputs_dir, f"{trainer.run_name}.png") if train_config.save_fig else None
-    plot_history(history, save_fig=output_path)
+    if model_config.mask:
+        plot_ssl_history(history, save_fig=output_path)
+    else:
+        plot_history(history, save_fig=output_path)
 
 
 if __name__ == '__main__':

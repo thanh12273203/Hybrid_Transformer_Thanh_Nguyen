@@ -63,9 +63,10 @@ class JetClassDataset(Dataset):
         return len(self.X_particles)
 
     def __getitem__(self, idx: int) -> Tuple[Tensor]:
-        particles = self.X_particles[idx].copy().T  # (max_num_particles, num_particle_features)
+        particles = self.X_particles[idx].T  # (max_num_particles, num_particle_features)
 
         if self.mask_mode is not None:
+            particles = particles.copy()
             masked_particles, masked_targets, mask_idx = self._mask_particle(particles, self.mask_mode)
 
             # Normalize features (in-place)
@@ -89,8 +90,6 @@ class JetClassDataset(Dataset):
                 torch.tensor(mask_idx, dtype=torch.int64)  # (1,)
             )
         else:
-            label = self.y[idx].copy()
-
             # Normalize features (in-place)
             feature_names = ['pT', 'eta', 'phi', 'energy']
             if self.norm_dict is not None:
@@ -103,10 +102,10 @@ class JetClassDataset(Dataset):
                         else:
                             particles[:, i] = (particles[:, i] - mean) / std
 
-            return (
-                torch.tensor(particles, dtype=torch.float32),  # (max_num_particles, num_particle_features)
-                torch.tensor(label, dtype=torch.float32)  # (num_classes,)
-            )
+            tensor = torch.from_numpy(particles).float()  # (max_num_particles, num_particle_features)
+            label = torch.from_numpy(self.y[idx]).float()  # (num_classes,)
+
+            return tensor, label
         
     def _mask_particle(self, particles: np.ndarray, mode: str = 'random') -> Tuple[np.ndarray, np.ndarray, int]:
         valid_idx = np.where(np.any(particles != 0, axis=1))[0]

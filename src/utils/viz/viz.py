@@ -122,6 +122,28 @@ def plot_history(history: Dict[str, List[float]], save_fig: Optional[str] = None
         plt.show()
 
 
+# Function to visualize the self-supervised masked model training progress
+# Visualize the self-supervised training history
+def plot_ssl_history(history: Dict[str, List[float]], save_fig: Optional[str] = None) -> None:
+    plt.figure(figsize=(12, 5))
+    plt.plot(history['pT_loss'], label="pT_loss")
+    plt.plot(history['eta_loss'], label="eta_loss")
+    plt.plot(history['phi_loss'], label="phi_loss")
+    plt.plot(history['energy_loss'], label="energy_loss")
+    plt.plot(history['val_loss'], label="val_loss")
+    plt.title("Self-supervised Training Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+
+    if save_fig:
+        plt.savefig(save_fig, dpi=300)
+    else:
+        plt.show()
+
+
 # Function to visualize the confusion matrix
 def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, labels: Optional[List[str]] = None, save_fig: Optional[str] = None) -> None:
     y_true_classes = np.argmax(y_true, axis=1)
