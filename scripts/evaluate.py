@@ -46,7 +46,15 @@ def main(
     # Read in the data
     X_test, y_test = load_memmap_data(test_data_dir, prefix='test')
     normalize = [True, False, False, True]
-    norm_dict = compute_norm_stats(X_test)
+    if rank == 0:
+        norm_dict = compute_norm_stats(X_test)
+    else:
+        norm_dict = None
+    
+    # Broadcast normalization stats to all processes
+    obj_list = [norm_dict]
+    torch.distributed.broadcast_object_list(obj_list, src=0)
+    norm_dict = obj_list[0]
 
     # Create the dataset
     if model_config.mask:

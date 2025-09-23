@@ -175,7 +175,7 @@ class Trainer:
         # Initialize data samplers
         train_sampler = DistributedSampler(train_dataset, shuffle=True) if self._is_distributed else None
         val_sampler = DistributedSampler(val_dataset, shuffle=False) if self._is_distributed else None
-        test_sampler = DistributedSampler(test_dataset, shuffle=False) if self._is_distributed else None
+        test_sampler = DistributedSampler(test_dataset, shuffle=False) if (test_dataset is not None and self._is_distributed) else None
 
         # Initialize data loaders
         self.train_loader = DataLoader(

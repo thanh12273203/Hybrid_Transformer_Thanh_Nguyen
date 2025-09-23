@@ -153,7 +153,7 @@ def build_memmap_data(data_dir: str, prefix: str) -> Tuple[str, str]:
     file_names = [name for name in os.listdir(data_dir) if name.endswith('.root')]
     particle_arrays = []
     label_arrays = []
-    for file_name in sorted(file_names):
+    for file_name in sorted(file_names[:50]):
         particle_array, jet_array, label_array = read_file(os.path.join(data_dir, file_name))
         particle_arrays.append(particle_array)
         label_arrays.append(label_array)
@@ -174,6 +174,7 @@ def load_memmap_data(data_dir: str, prefix: str) -> Tuple[np.memmap, np.memmap]:
             f"Memmap files {particles_file} or {labels_file} not found; "
             f"run build_memmap_data(data_dir, '{prefix}') first."
         )
+    
     particles_memmap = np.load(particles_file, mmap_mode='r')
     labels_memmap = np.load(labels_file, mmap_mode='r')
     
