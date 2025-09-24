@@ -36,7 +36,7 @@ train:
         # All supported optimizers can be found in 'src/optim/optim_registry.py'
         name: 'adamw'
         kwargs:
-            lr: 0.0001
+            lr: 0.00001
             weight_decay: 0.0
     scheduler:
         # All supported schedulers can be found in 'src/optim/scheduler_registry.py'
@@ -51,10 +51,10 @@ train:
               mode: 'min'  # 'min' or 'max'
               patience: 5
               min_delta: 0.001
-    num_epochs: 20
+    num_epochs: 30
     start_epoch: 0
     logging_dir: 'logs'
-    logging_steps: 1000
+    logging_steps: 20
     progress_bar: False
     save_best: True
     save_ckpt: True

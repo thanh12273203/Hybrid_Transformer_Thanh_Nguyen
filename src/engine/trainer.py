@@ -1,8 +1,6 @@
 import os
 import re
 import csv
-import sys
-from types import FrameType
 from typing import List, Tuple, Dict, Callable, Optional, Union
 
 import numpy as np
@@ -289,9 +287,6 @@ class Trainer:
         self.checkpoint_path = os.path.join(self.checkpoints_dir, f"{self.run_name}.pt") if self.save_ckpt else None
         self.logging_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
 
-        # Preempted exit by time limit
-        self.preempted = False
-
     def _get_next_run_index(self, directory: str, prefix: str, suffix: str) -> int:
         os.makedirs(directory, exist_ok=True)
         existing = [
@@ -351,13 +346,6 @@ class Trainer:
 
             writer.writerow(log_dict)
 
-    def handle_time_limit(self, signum: int, frame: Optional[FrameType]):
-        print(f"Received signal {signum} at epoch {self.cur_epoch + 1}. Saving current checkpoint.")
-        self.preempted = True
-        self.save_checkpoint(self.cur_epoch)
-        cleanup_ddp()
-        sys.exit(0)
-
     def train(self) -> Tuple[Dict[str, List[float]], nn.Module]:
         try:
             # Callback before training
@@ -392,8 +380,9 @@ class Trainer:
 
                 # Training phase
                 self.model.train()
-                running_loss = 0.0
-                running_metric = 0.0
+                running_loss_sum = 0.0
+                running_metric_sum = 0.0
+                running_count = 0
 
                 for batch_idx, (X, y) in enumerate(self.train_loader):
                     step = epoch * len(self.train_loader) + batch_idx + 1
@@ -406,13 +395,16 @@ class Trainer:
                     loss = self.criterion(outputs, y)
                     loss.backward()
                     self.optimizer.step()
-                    running_loss += loss.item()
-
+                    bsz = y.size(0)
+                    running_loss_sum += float(loss.item()) * bsz
+                    
                     if self.metric:
-                        running_metric += self.metric(outputs, y)
+                        running_metric_sum += float(self.metric(outputs, y)) * bsz
 
-                    avg_loss = running_loss / (batch_idx + 1)
-                    avg_metric = running_metric / (batch_idx + 1)
+                    running_count += bsz
+
+                    avg_loss = running_loss_sum / running_count
+                    avg_metric = (running_metric_sum / running_count) if self.metric else 0.0
 
                     # Short summary
                     if self.rank == 0:
@@ -527,14 +519,11 @@ class Trainer:
             for cb in self.callbacks:
                 cb.on_train_end(trainer=self)
         except KeyboardInterrupt:
-            if not self.preempted:
-                if self.rank == 0:
-                    print(f"\nTraining interrupted at epoch {self.cur_epoch + 1}. Saving current checkpoint.")
-
+            if self.rank == 0:
+                print(f"\nTraining interrupted at epoch {self.cur_epoch + 1}. Saving current checkpoint.")
                 self.save_checkpoint(self.cur_epoch)
-                cleanup_ddp()
 
-            raise
+            cleanup_ddp()
 
         return self.history, self.model
     

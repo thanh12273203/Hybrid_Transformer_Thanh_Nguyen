@@ -112,8 +112,9 @@ class MaskedModelTrainer(Trainer):
 
                 # Training phase
                 self.model.train()
-                running_loss = 0.0
+                running_loss_sum = 0.0
                 loss_components_sum = None
+                running_count = 0
 
                 for batch_idx, (X, y, mask_idx) in enumerate(self.train_loader):
                     step = epoch * len(self.train_loader) + batch_idx + 1
@@ -127,16 +128,17 @@ class MaskedModelTrainer(Trainer):
                     loss, components = self.criterion(outputs, y)
                     loss.backward()
                     self.optimizer.step()
-
-                    running_loss += loss.item()
+                    bsz = y.size(0)
+                    running_loss_sum += float(loss.item()) * bsz
+                    running_count += bsz
 
                     if loss_components_sum is None:
                         loss_components_sum = [0.0 for _ in components]
                     for i, comp in enumerate(components):
-                        loss_components_sum[i] += comp.item()
+                        loss_components_sum[i] += float(comp.item()) * bsz
 
-                    avg_loss = running_loss / (batch_idx + 1)
-                    avg_components = [s / (batch_idx + 1) for s in loss_components_sum]
+                    avg_loss = running_loss_sum / running_count
+                    avg_components = [s / running_count for s in loss_components_sum]
 
                     # Short summary
                     if self.rank == 0:
@@ -263,14 +265,11 @@ class MaskedModelTrainer(Trainer):
             for cb in self.callbacks:
                 cb.on_train_end(trainer=self)
         except KeyboardInterrupt:
-            if not self.preempted:
-                if self.rank == 0:
-                    print(f"\nTraining interrupted at epoch {self.cur_epoch + 1}. Saving current checkpoint.")
-                    
+            if self.rank == 0:
+                print(f"\nTraining interrupted at epoch {self.cur_epoch + 1}. Saving current checkpoint.")
                 self.save_checkpoint(self.cur_epoch)
-                cleanup_ddp()
-            
-            raise
+                
+            cleanup_ddp()
 
         return self.history, self.model
 

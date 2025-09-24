@@ -1,6 +1,5 @@
 import os
 import yaml
-import signal
 import argparse
 import warnings
 
@@ -11,7 +10,7 @@ from src.configs import LorentzParTConfig, TrainConfig
 from src.engine import Trainer, MaskedModelTrainer
 from src.models import LorentzParT
 from src.utils import accuracy_metric_ce, set_seed, setup_ddp, cleanup_ddp
-from src.utils.data import JetClassDataset, LazyJetClassDataset
+from src.utils.data import LazyJetClassDataset
 from src.utils.viz import plot_history, plot_ssl_history
 
 warnings.filterwarnings('ignore')
@@ -49,7 +48,7 @@ def main(
     # Initialize multi-GPU processing
     setup_ddp(rank, world_size)
 
-    # Read in the data
+    # Normalization settings
     normalize = [True, False, False, True]
     norm_dict = {
         'pT': (92.72917175292969, 105.83937072753906),
@@ -92,9 +91,6 @@ def main(
             metric=accuracy_metric_ce,
             config=train_config
         )
-
-    # Handle time limit exit for saving checkpoint
-    signal.signal(signal.SIGTERM, trainer.handle_time_limit)
 
     # Resume checkpoint if provided
     if checkpoint_path and os.path.exists(checkpoint_path):

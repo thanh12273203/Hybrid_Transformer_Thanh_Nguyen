@@ -24,3 +24,8 @@ srun --unbuffered --export=ALL shifter python -m scripts.train \
     --config-path ./configs/train_LorentzParT.yaml \
     --train-data-dir ./data/train_100M \
     --val-data-dir ./data/val_5M
+
+srun --unbuffered --export=ALL shifter python -m scripts.evaluate \
+    --config-path ./configs/train_LorentzParT.yaml \
+    --best-model-path ./logs/LorentzParT/best/run_01.pt \
+    --test-data-dir ./data/test_20M
