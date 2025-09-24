@@ -10,7 +10,7 @@ from src.configs import LorentzParTConfig, TrainConfig
 from src.engine import Trainer, MaskedModelTrainer
 from src.models import LorentzParT
 from src.utils import accuracy_metric_ce, set_seed, setup_ddp, cleanup_ddp
-from src.utils.data import JetClassDataset, compute_norm_stats, build_memmap_data, load_memmap_data
+from src.utils.data import JetClassDataset, LazyJetClassDataset
 from src.utils.viz import plot_history, plot_ssl_history
 
 warnings.filterwarnings('ignore')
@@ -49,13 +49,13 @@ def main(
     setup_ddp(rank, world_size)
 
     # Read in the data
-    X_train, y_train = load_memmap_data(train_data_dir, prefix='train')
-    X_val, y_val = load_memmap_data(val_data_dir, prefix='val')
     normalize = [True, False, False, True]
-    if rank == 0:
-        norm_dict = compute_norm_stats(X_val)
-    else:
-        norm_dict = None
+    norm_dict = {
+        'pT': (92.72917175292969, 105.83937072753906),
+        'eta': (0.0005733045982196927, 0.9174848794937134),
+        'phi': (-0.00041169871110469103, 1.8136887550354004),
+        'energy': (133.8745574951172, 167.528564453125)
+    }
     
     # Broadcast normalization stats to all processes
     obj_list = [norm_dict]
@@ -64,11 +64,11 @@ def main(
 
     # Create the dataset
     if model_config.mask:
-        train_dataset = JetClassDataset(X_train, y_train, normalize, norm_dict, mask_mode='biased')
-        val_dataset = JetClassDataset(X_val, y_val, normalize, norm_dict, mask_mode='biased')
+        train_dataset = LazyJetClassDataset(train_data_dir, normalize, norm_dict, mask_mode='biased')
+        val_dataset = LazyJetClassDataset(val_data_dir, normalize, norm_dict, mask_mode='biased')
     else:
-        train_dataset = JetClassDataset(X_train, y_train, normalize, norm_dict, mask_mode=None)
-        val_dataset = JetClassDataset(X_val, y_val, normalize, norm_dict, mask_mode=None)
+        train_dataset = LazyJetClassDataset(train_data_dir, normalize, norm_dict, mask_mode=None)
+        val_dataset = LazyJetClassDataset(val_data_dir, normalize, norm_dict, mask_mode=None)
 
     # Initialize the model
     model = LorentzParT(config=model_config).to(rank)
@@ -121,11 +121,7 @@ if __name__ == '__main__':
 
     # Reproducibility settings
     set_seed(42)
-
-    # Build memory-mapped data files if they do not exist
-    build_memmap_data(args.train_data_dir, prefix='train')
-    build_memmap_data(args.val_data_dir, prefix='val')
-
+    
     # Multi-GPU processing
     world_size = torch.cuda.device_count()
     if world_size > 1:

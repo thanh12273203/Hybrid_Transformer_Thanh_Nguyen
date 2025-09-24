@@ -25,7 +25,7 @@ model:
 
 
 train:
-    batch_size: 256
+    batch_size: 200  # must be divisible by 10
     criterion:
         # All supported loss functions can be found in 'src/loss/loss_registry.py'
         name: 'conservation_loss'

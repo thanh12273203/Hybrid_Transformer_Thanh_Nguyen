@@ -5,6 +5,6 @@ from .dataloader import (
     read_file
 )
 from .get_datasets import download_jetclass_data, extract_tar
-from .jetclass import JetClassDataset
+from .jetclass import JetClassDataset, LazyJetClassDataset
 from .normalize import compute_norm_stats
 from .sampler import JetClassDistributedSampler

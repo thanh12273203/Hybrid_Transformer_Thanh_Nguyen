@@ -180,8 +180,6 @@ class LazyJetClassDataset(JetClassDataset):
         norm_dict: Dict[str, Tuple[float, float]] = None,
         mask_mode: str = None
     ):
-        super().__init__()
-
         # Sorted list of absolute file paths
         self.files = sorted([
             os.path.join(data_dir, fname)
@@ -223,8 +221,8 @@ class LazyJetClassDataset(JetClassDataset):
         part = particles[event_idx].T  # (max_num_particles, num_particle_features)
         label = labels[event_idx]
 
+        part = part.copy()  # to avoid modifying the cached data
         if self.mask_mode is not None:
-            part = part.copy()
             masked_particles, masked_targets, mask_idx = self._mask_particle(part, self.mask_mode)
 
             # Normalize features (in-place)
