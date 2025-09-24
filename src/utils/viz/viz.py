@@ -123,7 +123,6 @@ def plot_history(history: Dict[str, List[float]], save_fig: Optional[str] = None
 
 
 # Function to visualize the self-supervised masked model training progress
-# Visualize the self-supervised training history
 def plot_ssl_history(history: Dict[str, List[float]], save_fig: Optional[str] = None) -> None:
     plt.figure(figsize=(12, 5))
     plt.plot(history['pT_loss'], label="pT_loss")
@@ -149,6 +148,7 @@ def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, labels: Option
     y_true_classes = np.argmax(y_true, axis=1)
     y_pred_classes = np.argmax(y_pred, axis=1)
     cm = confusion_matrix(y_true_classes, y_pred_classes,labels=np.arange(y_true.shape[1]))
+    cm = cm / 1000
 
     if labels is None:
         labels = [
@@ -165,11 +165,19 @@ def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, labels: Option
         ]
 
     plt.figure(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='coolwarm', xticklabels=labels, yticklabels=labels)
+    sns.heatmap(
+        data=cm,
+        annot=True,
+        fmt='.1f',
+        annot_kws={'size': 8},
+        xticklabels=labels,
+        yticklabels=labels,
+        cmap='coolwarm'
+    )
     plt.yticks(rotation=0)
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
-    plt.title("Confusion Matrix")
+    plt.title("Confusion Matrix (in thousands)")
     plt.tight_layout()
 
     if save_fig:

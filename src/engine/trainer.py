@@ -1,6 +1,8 @@
 import os
 import re
 import csv
+import sys
+from types import FrameType
 from typing import List, Tuple, Dict, Callable, Optional, Union
 
 import numpy as np
@@ -203,32 +205,50 @@ class Trainer:
         ) if (test_dataset is not None and self._is_distributed) else None
 
         # Initialize data loaders
-        self.train_loader = DataLoader(
-            dataset=train_dataset,
-            batch_size=self.batch_size,
-            shuffle=(not self._is_distributed),
-            batch_sampler=train_sampler,
-            num_workers=self.num_workers,
-            pin_memory=self.pin_memory
-        )
-        self.val_loader = DataLoader(
-            dataset=val_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            batch_sampler=val_sampler,
-            num_workers=self.num_workers,
-            pin_memory=self.pin_memory
-        )
-        self.test_loader = DataLoader(
-            dataset=test_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            batch_sampler=test_sampler,
-            num_workers=self.num_workers,
-            pin_memory=self.pin_memory
-        ) if test_dataset is not None else None
+        if self._is_distributed:
+            self.train_loader = DataLoader(
+                dataset=train_dataset,
+                batch_sampler=train_sampler,
+                num_workers=self.num_workers,
+                pin_memory=self.pin_memory
+            )
+            self.val_loader = DataLoader(
+                dataset=val_dataset,
+                batch_sampler=val_sampler,
+                num_workers=self.num_workers,
+                pin_memory=self.pin_memory
+            )
+            self.test_loader = DataLoader(
+                dataset=test_dataset,
+                batch_sampler=test_sampler,
+                num_workers=self.num_workers,
+                pin_memory=self.pin_memory
+            ) if test_dataset is not None else None
+        else:
+            self.train_loader = DataLoader(
+                dataset=train_dataset,
+                batch_size=self.batch_size,
+                shuffle=True,
+                num_workers=self.num_workers,
+                pin_memory=self.pin_memory
+            )
+            self.val_loader = DataLoader(
+                dataset=val_dataset,
+                batch_size=self.batch_size,
+                shuffle=False,
+                num_workers=self.num_workers,
+                pin_memory=self.pin_memory
+            )
+            self.test_loader = DataLoader(
+                dataset=test_dataset,
+                batch_size=self.batch_size,
+                shuffle=False,
+                num_workers=self.num_workers,
+                pin_memory=self.pin_memory
+            ) if test_dataset is not None else None
 
         # Initialize metrics and history
+        self.cur_epoch = self.start_epoch
         self.metric = metric
         self.history = history or {
             'epoch': [],
@@ -268,6 +288,9 @@ class Trainer:
         self.best_model_path = os.path.join(self.best_models_dir, f"{self.run_name}.pt") if self.save_best else None
         self.checkpoint_path = os.path.join(self.checkpoints_dir, f"{self.run_name}.pt") if self.save_ckpt else None
         self.logging_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
+
+        # Preempted exit by time limit
+        self.preempted = False
 
     def _get_next_run_index(self, directory: str, prefix: str, suffix: str) -> int:
         os.makedirs(directory, exist_ok=True)
@@ -328,6 +351,13 @@ class Trainer:
 
             writer.writerow(log_dict)
 
+    def handle_time_limit(self, signum: int, frame: Optional[FrameType]):
+        print(f"Received signal {signum} at epoch {self.cur_epoch + 1}. Saving current checkpoint.")
+        self.preempted = True
+        self.save_checkpoint(self.cur_epoch)
+        cleanup_ddp()
+        sys.exit(0)
+
     def train(self) -> Tuple[Dict[str, List[float]], nn.Module]:
         try:
             # Callback before training
@@ -350,6 +380,8 @@ class Trainer:
                 global_bar = _NoOpBar()
 
             for epoch in range(self.start_epoch, self.num_epochs):
+                self.cur_epoch = epoch
+
                 # Make DistributedSampler shuffle with a different seed each epoch
                 if self._is_distributed and isinstance(self.train_loader.sampler, DistributedSampler):
                     self.train_loader.sampler.set_epoch(epoch)
@@ -495,9 +527,14 @@ class Trainer:
             for cb in self.callbacks:
                 cb.on_train_end(trainer=self)
         except KeyboardInterrupt:
-            print(f"\nTraining interrupted at epoch {epoch + 1}. Saving current checkpoint.")
-            self.save_checkpoint(epoch)
-            cleanup_ddp()
+            if not self.preempted:
+                if self.rank == 0:
+                    print(f"\nTraining interrupted at epoch {self.cur_epoch + 1}. Saving current checkpoint.")
+
+                self.save_checkpoint(self.cur_epoch)
+                cleanup_ddp()
+
+            raise
 
         return self.history, self.model
     

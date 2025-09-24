@@ -1,5 +1,6 @@
 import os
 import yaml
+import signal
 import argparse
 import warnings
 
@@ -91,6 +92,9 @@ def main(
             metric=accuracy_metric_ce,
             config=train_config
         )
+
+    # Handle time limit exit for saving checkpoint
+    signal.signal(signal.SIGTERM, trainer.handle_time_limit)
 
     # Resume checkpoint if provided
     if checkpoint_path and os.path.exists(checkpoint_path):
