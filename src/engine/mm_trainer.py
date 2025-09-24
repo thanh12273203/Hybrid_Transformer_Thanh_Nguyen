@@ -79,6 +79,7 @@ class MaskedModelTrainer(Trainer):
         }
 
     def train(self) -> Tuple[Dict[str, List[float]], nn.Module]:
+        print(f"Number of batches: {len(self.train_loader)}")
         try:
             # Callback before training
             for cb in self.callbacks:

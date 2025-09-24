@@ -57,11 +57,10 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         self,
         files_by_class: List[List[int]],
         events_per_file: int = 100_000,
-        batch_size: int = 100,
-        num_replicas: int = 1,
+        batch_size: int = 1000,
+        num_nodes: int = 1,
         rank: int = 0,
         replicas_per_rank: int = 1,
-        local_replica_id: int = 0,
         seed: Optional[int] = None,
         shuffle_files: bool = True,
     ):
@@ -73,15 +72,14 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         self.files_by_class = files_by_class
         self.events_per_file = int(events_per_file)
         self.shuffle_files = bool(shuffle_files)
-        self.num_replicas = int(num_replicas)
+        self.num_nodes = int(num_nodes)
         self.rank = int(rank)
         self.replicas_per_rank = int(replicas_per_rank)
-        self.local_replica_id = int(local_replica_id)
-        self.virtual_world = self.num_replicas * self.replicas_per_rank
-        self.virtual_rank = self.rank * self.replicas_per_rank + self.local_replica_id
+        self.virtual_world = self.num_nodes * self.replicas_per_rank
+        self.virtual_rank = self.rank * self.replicas_per_rank + self.rank
 
         self.batch_size_global = int(batch_size)
-        assert self.batch_size_global % (self.num_replicas * 10) == 0, f"batch_size must be divisible by {self.num_replicas * 10}."
+        assert self.batch_size_global % (self.virtual_world * 10) == 0, f"batch_size must be divisible by {self.virtual_world * 10}."
         
         # Stronger guarantee if using replicas_per_rank > 1
         if self.replicas_per_rank > 1:

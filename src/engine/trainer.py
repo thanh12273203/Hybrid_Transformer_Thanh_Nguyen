@@ -181,24 +181,24 @@ class Trainer:
             files_by_class=train_dataset.files_by_class,
             events_per_file=train_dataset.events_per_file,
             batch_size=self.batch_size,
-            num_replicas=self.world_size,
             rank=self.rank,
+            replicas_per_rank=self.world_size,
             shuffle_files=True
         ) if self._is_distributed else None
         val_sampler = JetClassDistributedSampler(
             files_by_class=val_dataset.files_by_class,
             events_per_file=val_dataset.events_per_file,
             batch_size=self.batch_size,
-            num_replicas=self.world_size,
             rank=self.rank,
+            replicas_per_rank=self.world_size,
             shuffle_files=False
         ) if self._is_distributed else None
         test_sampler = JetClassDistributedSampler(
             files_by_class=test_dataset.files_by_class,
             events_per_file=test_dataset.events_per_file,
             batch_size=self.batch_size,
-            num_replicas=self.world_size,
             rank=self.rank,
+            replicas_per_rank=self.world_size,
             shuffle_files=False
         ) if (test_dataset is not None and self._is_distributed) else None
 

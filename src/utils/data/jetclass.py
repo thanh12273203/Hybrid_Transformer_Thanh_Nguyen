@@ -188,8 +188,10 @@ class LazyJetClassDataset(JetClassDataset):
         ])
 
         # Group file indices by class: file index mod 10 gives the class
+        files_per_class = len(self.files) // 10
         self.files_by_class = [
-            list(range(c, len(self.files), 10)) for c in range(10)
+            list(range(i * files_per_class, (i + 1) * files_per_class))
+            for i in range(10)
         ]
         self.events_per_file = 100_000
         self.normalize = normalize

@@ -6,7 +6,7 @@
 #SBATCH -t 48:00:00
 #SBATCH --ntasks-per-node 1
 #SBATCH --gpus-per-task 4
-#SBATCH --cpus-per-task 64
+#SBATCH --cpus-per-task 128
 #SBATCH --image=docker:thanh12273203/gsoc25_cms:latest
 #SBATCH --output=/pscratch/sd/t/thanh/logs/slurm-%j.out
 #SBATCH --error=/pscratch/sd/t/thanh/logs/slurm-%j.out
