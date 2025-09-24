@@ -1,4 +1,4 @@
-from typing import List, NamedTuple, Iterator
+from typing import List, NamedTuple, Iterator, Optional
 
 import torch
 from torch.utils.data import Sampler
@@ -48,7 +48,7 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         Number of independent dataloaders per rank (<=4 as per user).
     local_replica_id: int
         0..replicas_per_rank-1 to disjointly split work on the same rank.
-    seed: int
+    seed: int, optional
         Base seed for deterministic shuffles per epoch.
     shuffle_files: bool
         Shuffle file order per class each epoch.
@@ -56,13 +56,13 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
     def __init__(
         self,
         files_by_class: List[List[int]],
-        events_per_file: int,
-        batch_size: int,
+        events_per_file: int = 100_000,
+        batch_size: int = 100,
         num_replicas: int = 1,
         rank: int = 0,
         replicas_per_rank: int = 1,
         local_replica_id: int = 0,
-        seed: int = 42,
+        seed: Optional[int] = None,
         shuffle_files: bool = True,
     ):
         assert len(files_by_class) == 10, "Expect exactly 10 classes."
@@ -92,7 +92,7 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         assert self.local_batch_size % 10 == 0, "local_batch_size must be divisible by 10."
         self.per_file_local = self.local_batch_size // 10  # items drawn from each of the 10 files locally
 
-        self.seed = int(seed)
+        self.seed = int(seed) if seed is not None else int(torch.initial_seed() % 2**32)
         self.epoch = 0
 
     def set_epoch(self, epoch: int) -> None:
@@ -102,7 +102,7 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         return self.num_groups
 
     def _file_orders_for_epoch(self) -> List[List[int]]:
-        # Optionally shuffle the files per class; deterministic per epoch.
+        # Optionally shuffle the files per class; deterministic per epoch
         if not self.shuffle_files:
             return [list(range(len(cls_files))) for cls_files in self.files_by_class]
         
@@ -118,7 +118,7 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
     def __iter__(self) -> Iterator[List[SampleKey]]:
         orders = self._file_orders_for_epoch()
 
-        # For each group, pick one file per class
+        # Pick one file per class for each group
         for group_idx in range(self.num_groups):
             selected_files = [
                 self.files_by_class[c][orders[c][group_idx]] for c in range(10)

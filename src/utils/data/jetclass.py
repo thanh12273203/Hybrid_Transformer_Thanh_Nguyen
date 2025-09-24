@@ -1,3 +1,4 @@
+import os
 from typing import List, Tuple, Dict, Optional
 
 import numpy as np
@@ -5,6 +6,8 @@ import numpy as np
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset
+
+from .dataloader import read_file
 
 
 class JetClassDataset(Dataset):
@@ -53,6 +56,7 @@ class JetClassDataset(Dataset):
         norm_dict: Dict[str, Tuple[float, float]] = None,
         mask_mode: str = None
     ):
+        super().__init__()
         self.X_particles = X_particles
         self.y = y
         self.normalize = normalize
@@ -96,7 +100,6 @@ class JetClassDataset(Dataset):
                 for i, feature in enumerate(feature_names):
                     if self.normalize[i]:
                         mean, std = self.norm_dict[feature]
-
                         if i == 0 or i == 3:  # pT or energy where values are strictly positive
                             particles[:, i] = particles[:, i] / mean
                         else:
@@ -131,3 +134,132 @@ class JetClassDataset(Dataset):
         masked_particles[mask_idx, :] = 0.0
 
         return masked_particles, masked_targets, mask_idx
+    
+
+class LazyJetClassDataset(JetClassDataset):
+    """
+    A PyTorch dataset class to use JetClass for classification and self-supervised learning.
+    This class loads data from memory-mapped files on-the-fly to handle large datasets.
+
+    Parameters
+    ----------
+    data_dir: str
+        The directory containing the ROOT files.
+    normalize: List[bool], optional
+        A list indicating which features to normalize. Default is `[True, False, False, True]` (normalize pT and energy).
+    norm_dict: Dict[str, Tuple[float, float]], optional
+        A dictionary containing the normalization parameters (mean, std) for each feature.
+    mask_mode: str, optional
+        The masking mode to use. If not specified, no masking is applied.
+
+    Returns
+    -------
+    Tuple[Tensor, ...]
+        For self-supervised learning: a tuple containing the following elements:
+        - The masked particle features tensor of shape (max_num_particles, num_particle_features).
+        - The masked target labels tensor of shape (num_particle_features,).
+        - The mask index tensor of shape (1,).
+        
+        For classification: a tuple containing the following elements:
+        - The particle features tensor of shape (max_num_particles, num_particle_features).
+        - The target labels tensor of shape (num_classes,).
+
+    .. References::
+        Huilin Qu, Congqiao Li, and Sitian Qian.
+        [Particle Transformer for Jet Tagging](https://arxiv.org/abs/2202.03772).
+        In *Proceedings of the 39th International Conference on Machine Learning*, pages 18281-18292, 2022.
+
+        Huilin Qu, Congqiao Li, and Sitian Qian.
+        [JetClass: A Large-Scale Dataset for Deep Learning in Jet Physics](https://zenodo.org/records/6619768).
+        *Zenodo*, 2022.
+    """
+    def __init__(
+        self,
+        data_dir: str,
+        normalize: List[bool] = [True, False, False, True],  # [pT, eta, phi, energy]
+        norm_dict: Dict[str, Tuple[float, float]] = None,
+        mask_mode: str = None
+    ):
+        super().__init__()
+
+        # Sorted list of absolute file paths
+        self.files = sorted([
+            os.path.join(data_dir, fname)
+            for fname in os.listdir(data_dir)
+            if fname.endswith('.root')
+        ])
+
+        # Group file indices by class: file index mod 10 gives the class
+        self.files_by_class = [
+            list(range(c, len(self.files), 10)) for c in range(10)
+        ]
+        self.events_per_file = 100_000
+        self.normalize = normalize
+        self.norm_dict = norm_dict
+        self.mask_mode = mask_mode
+
+        # LRU cache: at most one loaded file kept in memory
+        self._cache_file_idx = None
+        self._cache_particles = None
+        self._cache_labels = None
+
+    def _load_file(self, idx: int) -> Tuple[np.ndarray, np.ndarray]:
+        if self._cache_file_idx == idx:
+            return self._cache_particles, self._cache_labels
+        
+        particles, _, labels = read_file(self.files[idx])
+        self._cache_file_idx = idx
+        self._cache_particles = particles
+        self._cache_labels = labels
+
+        return particles, labels
+
+    def __len__(self) -> int:
+        return len(self.files) * self.events_per_file
+
+    def __getitem__(self, key: Tuple[int, int]) -> Tuple[Tensor, ...]:
+        file_idx, event_idx = key
+        particles, labels = self._load_file(file_idx)
+        part = particles[event_idx].T  # (max_num_particles, num_particle_features)
+        label = labels[event_idx]
+
+        if self.mask_mode is not None:
+            part = part.copy()
+            masked_particles, masked_targets, mask_idx = self._mask_particle(part, self.mask_mode)
+
+            # Normalize features (in-place)
+            feature_names = ['pT', 'eta', 'phi', 'energy']
+
+            if self.norm_dict is not None:
+                for i, feature in enumerate(feature_names):
+                    if self.normalize[i]:
+                        mean, std = self.norm_dict[feature]
+
+                        if i == 0 or i == 3:  # pT or energy where values are strictly positive
+                            masked_particles[:, i] = masked_particles[:, i] / mean
+                            masked_targets[:, i] = masked_targets[:, i] / mean
+                        else:
+                            masked_particles[:, i] = (masked_particles[:, i] - mean) / std
+                            masked_targets[:, i] = (masked_targets[:, i] - mean) / std
+
+            return (
+                torch.tensor(masked_particles, dtype=torch.float32),  # (max_num_particles, num_particle_features)
+                torch.tensor(masked_targets.squeeze(0), dtype=torch.float32),  # (num_particle_features,)
+                torch.tensor(mask_idx, dtype=torch.int64)  # (1,)
+            )
+        else:
+            # Normalize features (in-place)
+            if self.norm_dict:
+                feature_names = ['pT', 'eta', 'phi', 'energy']
+                for i, feature in enumerate(feature_names):
+                    if self.normalize[i]:
+                        mean, std = self.norm_dict[feature]
+                        if i == 0 or i == 3:  # pT or energy where values are strictly positive
+                            part[:, i] = part[:, i] / mean
+                        else:
+                            part[:, i] = (part[:, i] - mean) / std
+
+            part = torch.from_numpy(part).float()
+            label = torch.from_numpy(label).float()
+
+            return part, label

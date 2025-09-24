@@ -29,6 +29,7 @@ from ..utils import (
     get_callbacks_from_config,
     cleanup_ddp
 )
+from ..utils.data import JetClassDistributedSampler
 from ..utils.viz import *
 
 
@@ -175,17 +176,38 @@ class Trainer:
             self.num_workers = num_workers if num_workers is not None else 0
             self.pin_memory = pin_memory if pin_memory is not None else False
         
-        # Initialize data samplers
-        train_sampler = DistributedSampler(train_dataset, shuffle=True) if self._is_distributed else None
-        val_sampler = DistributedSampler(val_dataset, shuffle=False) if self._is_distributed else None
-        test_sampler = DistributedSampler(test_dataset, shuffle=False) if (test_dataset is not None and self._is_distributed) else None
+        # Initialize data samplers for distributed training
+        train_sampler = JetClassDistributedSampler(
+            files_by_class=train_dataset.files_by_class,
+            events_per_file=train_dataset.events_per_file,
+            batch_size=self.batch_size,
+            num_replicas=self.world_size,
+            rank=self.rank,
+            shuffle_files=True
+        ) if self._is_distributed else None
+        val_sampler = JetClassDistributedSampler(
+            files_by_class=val_dataset.files_by_class,
+            events_per_file=val_dataset.events_per_file,
+            batch_size=self.batch_size,
+            num_replicas=self.world_size,
+            rank=self.rank,
+            shuffle_files=False
+        ) if self._is_distributed else None
+        test_sampler = JetClassDistributedSampler(
+            files_by_class=test_dataset.files_by_class,
+            events_per_file=test_dataset.events_per_file,
+            batch_size=self.batch_size,
+            num_replicas=self.world_size,
+            rank=self.rank,
+            shuffle_files=False
+        ) if (test_dataset is not None and self._is_distributed) else None
 
         # Initialize data loaders
         self.train_loader = DataLoader(
             dataset=train_dataset,
             batch_size=self.batch_size,
             shuffle=(not self._is_distributed),
-            sampler=train_sampler,
+            batch_sampler=train_sampler,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         )
@@ -193,7 +215,7 @@ class Trainer:
             dataset=val_dataset,
             batch_size=self.batch_size,
             shuffle=False,
-            sampler=val_sampler,
+            batch_sampler=val_sampler,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         )
@@ -201,7 +223,7 @@ class Trainer:
             dataset=test_dataset,
             batch_size=self.batch_size,
             shuffle=False,
-            sampler=test_sampler,
+            batch_sampler=test_sampler,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory
         ) if test_dataset is not None else None
