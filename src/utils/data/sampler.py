@@ -21,46 +21,44 @@ def _coprime_step(n: int, gen: torch.Generator) -> int:
 
 class JetClassDistributedSampler(Sampler[List[SampleKey]]):
     """
-    Yields batches where each batch touches exactly one file per class (10 files total).
-    Within the 10 files, it samples disjoint event indices across (world_size * replicas_per_rank).
-    __len__ == number of file-groups per epoch (usually 100 when each class has 100 files).
-
-    Requirements
-    ------------
-    - batch_size % (world_size * 10) == 0
-    - If replicas_per_rank > 1: batch_size % (world_size * replicas_per_rank * 10) == 0
-    - Dataset __getitem__ must accept a SampleKey(file_idx, event_idx) or a tuple with same fields.
+    Deterministic, class-balanced distributed batch sampler that:
+    - Builds each batch from exactly one file per class (10 files total).
+    - Iterates *every event in every file exactly once per epoch*, disjoint across ranks.
 
     Parameters
     ----------
     files_by_class: List[List[int]]
-        List of length 10. Each element is a list of file indices for that class.
-        All classes should have the same length (e.g., 100).
+        A list of length 10. Each entry is the list of file indices for that class,
+        all classes having the same count (e.g., 100 files/class for train).
     events_per_file: int
-        Number of events in each file.
+        Number of events in each file (e.g., 100_000).
     batch_size: int
-        Global batch size (sum over all ranks and replicas).
-    num_replicas: int
-        torch.distributed.get_world_size() or 1 if not using DDP.
+        *Global* batch size (sum over all ranks). Must be divisible by (world_size * 10).
     rank: int
-        torch.distributed.get_rank() or 0.
-    replicas_per_rank: int
-        Number of independent dataloaders per rank (<=4 as per user).
-    local_replica_id: int
-        0..replicas_per_rank-1 to disjointly split work on the same rank.
-    seed: int, optional
-        Base seed for deterministic shuffles per epoch.
+        Global DDP rank for this process.
+    world_size: int
+        Total number of DDP processes (e.g., #GPUs across the node(s)).
+    seed: Optional[int]
+        Base seed for deterministic file ordering and within-batch shuffles. If None,
+        a value derived from torch.initial_seed() is used.
     shuffle_files: bool
-        Shuffle file order per class each epoch.
+        Whether to shuffle file order per class each epoch (deterministic given seed).
+
+    Returns
+    -------
+    Iterator[List[SampleKey]]
+        An iterator over batches. Each yielded batch is a list of `SampleKey(file_idx, event_idx)`
+        covering `local_batch_size` samples (drawn evenly: local_batch_size/10 from each of the
+        10 selected files) for this rank. Across all ranks and all steps in an epoch, every
+        event in every file is visited exactly once.
     """
     def __init__(
         self,
         files_by_class: List[List[int]],
         events_per_file: int = 100_000,
-        batch_size: int = 1000,
-        num_nodes: int = 1,
+        batch_size: int = 1000,  # global batch size
         rank: int = 0,
-        replicas_per_rank: int = 1,
+        world_size: int = 1,  # pass world_size here
         seed: Optional[int] = None,
         shuffle_files: bool = True,
     ):
@@ -72,23 +70,30 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         self.files_by_class = files_by_class
         self.events_per_file = int(events_per_file)
         self.shuffle_files = bool(shuffle_files)
-        self.num_nodes = int(num_nodes)
+
+        # Match DDP world_size when replicas_per_rank = 4
         self.rank = int(rank)
-        self.replicas_per_rank = int(replicas_per_rank)
-        self.virtual_world = self.num_nodes * self.replicas_per_rank
-        self.virtual_rank = self.rank * self.replicas_per_rank + self.rank
+        self.world_size = int(world_size)  # 4
 
-        self.batch_size_global = int(batch_size)
-        assert self.batch_size_global % (self.virtual_world * 10) == 0, f"batch_size must be divisible by {self.virtual_world * 10}."
-        
-        # Stronger guarantee if using replicas_per_rank > 1
-        if self.replicas_per_rank > 1:
-            assert self.batch_size_global % (self.virtual_world * 10) == 0, f"with replicas_per_rank > 1, batch_size must be divisible by {self.virtual_world * 10}."
+        self.batch_size_global = int(batch_size)  # 1000
+        assert self.batch_size_global % (self.world_size * 10) == 0, \
+        f"batch_size must be divisible by {self.world_size * 10}."
 
-        # Per (virtual) rank batch size
-        self.local_batch_size = self.batch_size_global // self.virtual_world
+        # Stronger guarantee if using world_size > 1
+        if self.world_size > 1:
+            assert self.batch_size_global % (self.world_size * 10) == 0, \
+            f"with world_size > 1, batch_size must be divisible by {self.world_size * 10}."
+
+        # Per-(virtual)rank batch size and per-file local draw
+        self.local_batch_size = self.batch_size_global // self.world_size  # 250
         assert self.local_batch_size % 10 == 0, "local_batch_size must be divisible by 10."
-        self.per_file_local = self.local_batch_size // 10  # items drawn from each of the 10 files locally
+        self.per_file_local = self.local_batch_size // 10  # items this rank draws per file per step (25)
+        self.per_file_global = self.per_file_local * self.world_size  # items all ranks draw per file per step (100)
+
+        # Cover exactly all events in each file per epoch
+        assert self.events_per_file % self.per_file_global == 0, \
+        f"events_per_file ({self.events_per_file}) must be divisible by per_file_global ({self.per_file_global})."
+        self.steps_per_file = self.events_per_file // self.per_file_global  # e.g., 100K / (1K/10) = 1K
 
         self.seed = int(seed) if seed is not None else int(torch.initial_seed() % 2**32)
         self.epoch = 0
@@ -97,7 +102,7 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         self.epoch = int(epoch)
 
     def __len__(self) -> int:
-        return self.num_groups
+        return self.num_groups * self.steps_per_file  # 100 * 1K = 100K
 
     def _file_orders_for_epoch(self) -> List[List[int]]:
         # Optionally shuffle the files per class; deterministic per epoch
@@ -122,37 +127,42 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
                 self.files_by_class[c][orders[c][group_idx]] for c in range(10)
             ]
 
-            # Build local batch by taking per_file_local indices from each selected file
-            batch = []
-
+            # Precompute a permutation (start, step) per file that is constant across steps
+            per_file_rng = {}
             for fid in selected_files:
-                # Deterministic per (epoch, group, file) to keep all ranks in sync
                 g = torch.Generator()
-
-                # Mix seeds; different constants reduce correlation
+                # Deterministic per (epoch, file); not dependent on pass index
                 g.manual_seed(
-                    self.seed
-                    ^ (self.epoch * 0x9E3779B97F4A7C15 & 0xFFFFFFFFFFFF)
-                    ^ (group_idx * 0xBF58476D1CE4E5B9 & 0xFFFFFFFFFFFF)
-                    ^ (fid * 0x94D049BB133111EB & 0xFFFFFFFFFFFF)
+                    self.seed ^ \
+                    (self.epoch * 0x9E3779B97F4A7C15 & 0xFFFFFFFFFFFF) ^ \
+                    (fid * 0x94D049BB133111EB & 0xFFFFFFFFFFFF)
                 )
-                N = self.events_per_file
-                start = int(torch.randint(0, N, (1,), generator=g).item())
-                step = _coprime_step(N, g)  # gcd(step, N) == 1
+                start = int(torch.randint(0, self.events_per_file, (1,), generator=g).item())
+                step = _coprime_step(self.events_per_file, g)
+                per_file_rng[fid] = (start, step)
 
-                # Global batch per file split evenly across virtual ranks
-                # Use disjoint chunks from a single arithmetic progression permutation
-                chunk_size = self.per_file_local
-                offset = self.virtual_rank * chunk_size  # disjoint across virtual ranks
+            # Walk through all steps needed to exhaust each file
+            for pass_idx in range(self.steps_per_file):
+                batch = []
 
-                # Generate exactly chunk_size unique indices for this virtual rank
-                for j in range(chunk_size):
-                    ev = (start + (offset + j) * step) % N
-                    batch.append(SampleKey(file_idx=fid, event_idx=ev))
+                # Global offset at this pass for each file; disjoint across ranks
+                base_offset_global = pass_idx * self.per_file_global + self.rank * self.per_file_local
+                for fid in selected_files:
+                    start, step = per_file_rng[fid]
+                    N = self.events_per_file
 
-            # Light shuffle inside the local batch for extra randomness
-            g_batch = torch.Generator()
-            g_batch.manual_seed(self.seed * 65537 + self.epoch * 131071 + group_idx * 524287 + self.virtual_rank)
-            perm = torch.randperm(len(batch), generator=g_batch).tolist()
+                    # Indices for this rank from this file for this step
+                    for j in range(self.per_file_local):
+                        pos = base_offset_global + j
+                        ev = (start + pos * step) % N
+                        batch.append(SampleKey(file_idx=fid, event_idx=ev))
 
-            yield [batch[i] for i in perm]
+                # Optional light within-batch shuffle (deterministic)
+                g_batch = torch.Generator()
+                g_batch.manual_seed(
+                    self.seed * 65537 + self.epoch * 131071 + \
+                    group_idx * 524287 + pass_idx * 8191 + self.rank
+                )
+                perm = torch.randperm(len(batch), generator=g_batch).tolist()
+
+                yield [batch[i] for i in perm]

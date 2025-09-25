@@ -54,7 +54,7 @@ train:
     num_epochs: 30
     start_epoch: 0
     logging_dir: 'logs'
-    logging_steps: 20
+    logging_steps: 10000
     progress_bar: False
     save_best: True
     save_ckpt: True

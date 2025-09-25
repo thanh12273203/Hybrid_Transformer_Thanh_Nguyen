@@ -16,7 +16,6 @@ from torch.distributed import (
 )
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import Dataset, DataLoader
-from torch.utils.data.distributed import DistributedSampler
 
 from ..configs import TrainConfig
 from ..loss import LOSS_REGISTRY
@@ -182,7 +181,7 @@ class Trainer:
             events_per_file=train_dataset.events_per_file,
             batch_size=self.batch_size,
             rank=self.rank,
-            replicas_per_rank=self.world_size,
+            world_size=self.world_size,
             shuffle_files=True
         ) if self._is_distributed else None
         val_sampler = JetClassDistributedSampler(
@@ -190,7 +189,7 @@ class Trainer:
             events_per_file=val_dataset.events_per_file,
             batch_size=self.batch_size,
             rank=self.rank,
-            replicas_per_rank=self.world_size,
+            world_size=self.world_size,
             shuffle_files=False
         ) if self._is_distributed else None
         test_sampler = JetClassDistributedSampler(
@@ -198,7 +197,7 @@ class Trainer:
             events_per_file=test_dataset.events_per_file,
             batch_size=self.batch_size,
             rank=self.rank,
-            replicas_per_rank=self.world_size,
+            world_size=self.world_size,
             shuffle_files=False
         ) if (test_dataset is not None and self._is_distributed) else None
 
@@ -371,8 +370,8 @@ class Trainer:
                 self.cur_epoch = epoch
 
                 # Make DistributedSampler shuffle with a different seed each epoch
-                if self._is_distributed and isinstance(self.train_loader.sampler, DistributedSampler):
-                    self.train_loader.sampler.set_epoch(epoch)
+                if self._is_distributed and isinstance(self.train_loader.batch_sampler, JetClassDistributedSampler):
+                    self.train_loader.batch_sampler.set_epoch(epoch)
 
                 # Callback at the beginning of each epoch
                 for cb in self.callbacks:

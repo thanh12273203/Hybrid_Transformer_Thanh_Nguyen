@@ -7,10 +7,10 @@ from tqdm.auto import tqdm
 import torch
 from torch import nn
 from torch.distributed import all_gather, all_gather_object
-from torch.utils.data.distributed import DistributedSampler
 
 from .trainer import Trainer
 from ..utils import cleanup_ddp
+from ..utils.data import JetClassDistributedSampler
 from ..utils.viz import *
 
 
@@ -79,7 +79,6 @@ class MaskedModelTrainer(Trainer):
         }
 
     def train(self) -> Tuple[Dict[str, List[float]], nn.Module]:
-        print(f"Number of batches: {len(self.train_loader)}")
         try:
             # Callback before training
             for cb in self.callbacks:
@@ -104,8 +103,8 @@ class MaskedModelTrainer(Trainer):
                 self.cur_epoch = epoch
 
                 # Make DistributedSampler shuffle with a different seed each epoch
-                if self._is_distributed and isinstance(self.train_loader.sampler, DistributedSampler):
-                    self.train_loader.sampler.set_epoch(epoch)
+                if self._is_distributed and isinstance(self.train_loader.batch_sampler, JetClassDistributedSampler):
+                    self.train_loader.batch_sampler.set_epoch(epoch)
 
                 # Callback at the beginning of each epoch
                 for cb in self.callbacks:
