@@ -25,7 +25,7 @@ model:
 
 
 train:
-    batch_size: 1000  # must be divisible by 10
+    batch_size: 2000  # must be divisible by 10
     criterion:
         # All supported loss functions can be found in 'src/loss/loss_registry.py'
         name: 'conservation_loss'
@@ -36,7 +36,7 @@ train:
         # All supported optimizers can be found in 'src/optim/optim_registry.py'
         name: 'adamw'
         kwargs:
-            lr: 0.00028
+            lr: 0.001
             weight_decay: 0.0
     scheduler:
         # All supported schedulers can be found in 'src/optim/scheduler_registry.py'
@@ -51,7 +51,7 @@ train:
               mode: 'min'  # 'min' or 'max'
               patience: 5
               min_delta: 0.001
-    num_epochs: 30
+    num_epochs: 10
     start_epoch: 0
     logging_dir: 'logs'
     logging_steps: 10000
