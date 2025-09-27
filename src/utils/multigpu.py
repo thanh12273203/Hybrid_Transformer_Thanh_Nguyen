@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 import numpy as np
 
@@ -21,7 +22,7 @@ def setup_ddp(rank: int, world_size: int):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
     torch.cuda.set_device(rank)
-    init_process_group('nccl', rank=rank, world_size=world_size)
+    init_process_group('nccl', rank=rank, world_size=world_size, timeout=timedelta(hours=1))
 
 
 def cleanup_ddp():

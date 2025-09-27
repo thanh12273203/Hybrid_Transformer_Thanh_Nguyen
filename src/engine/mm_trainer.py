@@ -100,8 +100,6 @@ class MaskedModelTrainer(Trainer):
                 global_bar = _NoOpBar()
 
             for epoch in range(self.start_epoch, self.num_epochs):
-                self.cur_epoch = epoch
-
                 # Make DistributedSampler shuffle with a different seed each epoch
                 if self._is_distributed and isinstance(self.train_loader.batch_sampler, JetClassDistributedSampler):
                     self.train_loader.batch_sampler.set_epoch(epoch)
@@ -266,9 +264,9 @@ class MaskedModelTrainer(Trainer):
                 cb.on_train_end(trainer=self)
         except KeyboardInterrupt:
             if self.rank == 0:
-                print(f"\nTraining interrupted at epoch {self.cur_epoch + 1}. Saving current checkpoint.")
-                self.save_checkpoint(self.cur_epoch)
-                
+                print(f"\nTraining interrupted at epoch {epoch + 1}. Saving current checkpoint.")
+                self.save_checkpoint(epoch)
+
             cleanup_ddp()
 
         return self.history, self.model
