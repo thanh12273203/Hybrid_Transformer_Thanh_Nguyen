@@ -17,7 +17,7 @@ def parse_args() -> argparse.Namespace:
 
     # Model and configurations arguments
     parser.add_argument('--config-path', type=str, default='./configs/train_LorentzParT.yaml', help="Path to YAML config")
-    parser.add_argument('--best-model-path', type=str, default='./logs/LorentzParT/best/pretrained_equilinear_clf.pt', help="Path to best model weights")
+    parser.add_argument('--best-model-path', type=str, default='./logs/LorentzParT/best/run_01.pt', help="Path to best model weights")
 
     # Data loading arguments
     parser.add_argument('--test-data-dir', type=str, default='./data/test_20M', help="Test data folder")

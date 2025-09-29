@@ -21,36 +21,33 @@ def _coprime_step(n: int, gen: torch.Generator) -> int:
 
 class JetClassDistributedSampler(Sampler[List[SampleKey]]):
     """
-    Deterministic, class-balanced distributed batch sampler that:
-    - Builds each batch from exactly one file per class (10 files total).
-    - Iterates *every event in every file exactly once per epoch*, disjoint across ranks.
+    Deterministic, class-balanced distributed batch sampler.
+
+    Each batch draws evenly from exactly one file per class (10 files),
+    and across all steps in an epoch it visits *every event of every file*
+    exactly once, disjoint across ranks.
 
     Parameters
     ----------
     files_by_class: List[List[int]]
-        A list of length 10. Each entry is the list of file indices for that class,
-        all classes having the same count (e.g., 100 files/class for train).
+        10 lists of file indices (equal length per class).
     events_per_file: int
-        Number of events in each file (e.g., 100_000).
+        Events per file (e.g., 100_000).
     batch_size: int
-        *Global* batch size (sum over all ranks). Must be divisible by (world_size * 10).
+        Global batch size (sum over ranks). Must be divisible by world_size*10.
     rank: int
-        Global DDP rank for this process.
+        Global DDP rank.
     world_size: int
-        Total number of DDP processes (e.g., #GPUs across the node(s)).
+        Total DDP processes.
     seed: Optional[int]
-        Base seed for deterministic file ordering and within-batch shuffles. If None,
-        a value derived from torch.initial_seed() is used.
+        Base seed for deterministic shuffles.
     shuffle_files: bool
-        Whether to shuffle file order per class each epoch (deterministic given seed).
+        Shuffle file order per epoch.
 
     Returns
     -------
     Iterator[List[SampleKey]]
-        An iterator over batches. Each yielded batch is a list of `SampleKey(file_idx, event_idx)`
-        covering `local_batch_size` samples (drawn evenly: local_batch_size/10 from each of the
-        10 selected files) for this rank. Across all ranks and all steps in an epoch, every
-        event in every file is visited exactly once.
+        Batches of `SampleKey(file_idx, event_idx)` of length local_batch_size.
     """
     def __init__(
         self,
@@ -75,7 +72,7 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         self.rank = int(rank)
         self.world_size = int(world_size)  # 4
 
-        self.batch_size_global = int(batch_size)  # 1000
+        self.batch_size_global = int(batch_size)  # 2000
         assert self.batch_size_global % (self.world_size * 10) == 0, \
         f"batch_size must be divisible by {self.world_size * 10}."
 
@@ -85,15 +82,15 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
             f"with world_size > 1, batch_size must be divisible by {self.world_size * 10}."
 
         # Per-(virtual)rank batch size and per-file local draw
-        self.local_batch_size = self.batch_size_global // self.world_size  # 250
+        self.local_batch_size = self.batch_size_global // self.world_size  # 500
         assert self.local_batch_size % 10 == 0, "local_batch_size must be divisible by 10."
-        self.per_file_local = self.local_batch_size // 10  # items this rank draws per file per step (25)
-        self.per_file_global = self.per_file_local * self.world_size  # items all ranks draw per file per step (100)
+        self.per_file_local = self.local_batch_size // 10  # per rank, per file, per step (50)
+        self.per_file_global = self.per_file_local * self.world_size  # across all ranks, per file, per step (200)
 
         # Cover exactly all events in each file per epoch
         assert self.events_per_file % self.per_file_global == 0, \
         f"events_per_file ({self.events_per_file}) must be divisible by per_file_global ({self.per_file_global})."
-        self.steps_per_file = self.events_per_file // self.per_file_global  # e.g., 100K / (1K/10) = 1K
+        self.steps_per_file = self.events_per_file // self.per_file_global
 
         self.seed = int(seed) if seed is not None else int(torch.initial_seed() % 2**32)
         self.epoch = 0
