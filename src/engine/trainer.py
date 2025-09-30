@@ -123,7 +123,7 @@ class Trainer:
             self.device = device
         else:
             if torch.cuda.is_available():
-                self.device = self.rank
+                self.device = torch.device(f'cuda:{self.rank}')
             else:
                 self.device = torch.device('cpu')
 

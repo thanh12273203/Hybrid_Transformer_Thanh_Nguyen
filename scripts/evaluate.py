@@ -42,6 +42,7 @@ def main(
 
     # Initialize multi-GPU processing
     setup_ddp(rank, world_size)
+    device = torch.device(f'cuda:{rank}' if torch.cuda.is_available() else 'cpu')
 
     # Normalization settings
     normalize = [True, False, False, True]
@@ -64,7 +65,7 @@ def main(
         test_dataset = LazyJetClassDataset(test_data_dir, normalize, norm_dict, mask_mode=None)
 
     # Initialize the model
-    model = LorentzParT(config=model_config).to(rank)
+    model = LorentzParT(config=model_config).to(device)
 
     # Trainer stub for evaluation convenience
     if model_config.mask:
@@ -73,7 +74,7 @@ def main(
             train_dataset=test_dataset,
             val_dataset=test_dataset,
             test_dataset=test_dataset,
-            device=rank,
+            device=device,
             config=train_config
         )
     else:
@@ -82,7 +83,7 @@ def main(
             train_dataset=test_dataset,
             val_dataset=test_dataset,
             test_dataset=test_dataset,
-            device=rank,
+            device=device,
             metric=accuracy_metric_ce,
             config=train_config
         )
