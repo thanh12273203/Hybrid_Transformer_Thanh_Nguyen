@@ -617,6 +617,7 @@ class Trainer:
                         elif getattr(viz, '__name__', '') == 'plot_confusion_matrix':
                             output_path = os.path.join(self.outputs_dir, f"{self.run_name}_confusion_matrix.png")
 
+                        output_path = output_path if self.save_fig else None
                         viz(y_true, y_pred, save_fig=output_path)
                 else:
                     if getattr(plot, '__name__', '') == 'plot_roc_curve':
@@ -624,6 +625,7 @@ class Trainer:
                     elif getattr(plot, '__name__', '') == 'plot_confusion_matrix':
                         output_path = os.path.join(self.outputs_dir, f"{self.run_name}_confusion_matrix.png")
 
+                    output_path = output_path if self.save_fig else None
                     plot(y_true, y_pred, save_fig=output_path)
 
         return test_loss, test_metric, y_true, y_pred

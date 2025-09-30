@@ -377,9 +377,11 @@ class MaskedModelTrainer(Trainer):
                 if isinstance(plot, list):
                     for i, viz in enumerate(plot):
                         output_path = os.path.join(self.outputs_dir, f"{self.run_name}_viz_{i + 1}.png")
+                        output_path = output_path if self.save_fig else None
                         viz(y_true, y_pred, save_fig=output_path)
                 else:
                     output_path = os.path.join(self.outputs_dir, f"{self.run_name}_particle_reconstruction.png")
+                    output_path = output_path if self.save_fig else None
                     plot(y_true, y_pred, save_fig=output_path)
 
         return test_loss, test_metric, y_true, y_pred

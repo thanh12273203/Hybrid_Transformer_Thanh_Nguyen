@@ -88,7 +88,6 @@ def main(
         )
 
     # Load the best model
-    print(f"Loading best model: {best_model_path}")
     trainer.load_best_model(best_model_path)
 
     # Evaluate the model
@@ -117,6 +116,7 @@ if __name__ == '__main__':
         mp.spawn(
             main,
             args=(
+                world_size,
                 args.config_path,
                 args.best_model_path,
                 args.test_data_dir

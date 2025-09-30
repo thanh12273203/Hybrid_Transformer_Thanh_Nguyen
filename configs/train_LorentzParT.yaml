@@ -20,7 +20,7 @@ model:
     num_particle_features: 4
     pair_embed_dims: [64, 64, 64]
     mask: True
-    weights: 
+    weights: #./logs/LorentzParT/best/run_01.pt
     inference: False
 
 
