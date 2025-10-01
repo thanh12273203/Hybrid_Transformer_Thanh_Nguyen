@@ -298,6 +298,13 @@ class Trainer:
 
         return max(indices, default=0) + 1
 
+    def _set_logging_paths(self, run_name: str):
+        self.run_name = run_name
+        self._log_header_written = True
+        self.best_model_path = os.path.join(self.best_models_dir, f"{self.run_name}.pt") if self.save_best else None
+        self.checkpoint_path = os.path.join(self.checkpoints_dir, f"{self.run_name}.pt") if self.save_ckpt else None
+        self.logging_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
+
     def save_checkpoint(self, epoch: int):
         model_state = self.model.module.state_dict() if self._is_distributed else self.model.state_dict()
         if self.checkpoint_path and self.rank == 0:
@@ -313,11 +320,7 @@ class Trainer:
 
     def load_checkpoint(self, checkpoint_path: str):
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
-        self.run_name = checkpoint['run_name']
-        self._log_header_written = True
-        self.best_model_path = os.path.join(self.best_models_dir, f"{self.run_name}.pt") if self.save_best else None
-        self.checkpoint_path = os.path.join(self.checkpoints_dir, f"{self.run_name}.pt") if self.save_ckpt else None
-        self.logging_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
+        self._set_logging_paths(checkpoint['run_name'])
         target = self.model.module if self._is_distributed else self.model
         target.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -328,6 +331,8 @@ class Trainer:
         self.history = checkpoint['history']
     
     def load_best_model(self, best_model_path: str):
+        run_name = os.path.splitext(os.path.basename(best_model_path))[0]
+        self._set_logging_paths(run_name)
         target = self.model.module if self._is_distributed else self.model
         target.load_state_dict(torch.load(best_model_path, map_location=self.device))
 
