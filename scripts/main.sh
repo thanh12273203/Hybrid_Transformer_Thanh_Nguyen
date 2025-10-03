@@ -25,7 +25,8 @@ srun --unbuffered --export=ALL shifter python -m scripts.train \
     --train-data-dir ./data/train_100M \
     --val-data-dir ./data/val_5M
 
+# Remember to change --best-model-path to the path of the best model you want to evaluate
 srun --unbuffered --export=ALL shifter python -m scripts.evaluate \
     --config-path ./configs/train_LorentzParT.yaml \
-    --best-model-path ./logs/LorentzParT/best/run_01.pt \
+    --best-model-path ./logs/LorentzParT/best/run_03.pt \
     --test-data-dir ./data/test_20M
