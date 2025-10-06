@@ -2,8 +2,8 @@
 #SBATCH -A m4392
 #SBATCH -C gpu
 #SBATCH -N 1
-#SBATCH -q regular
-#SBATCH -t 48:00:00
+#SBATCH -q debug
+#SBATCH -t 00:10:00
 #SBATCH --ntasks-per-node 1
 #SBATCH --gpus-per-task 4
 #SBATCH --cpus-per-task 128
@@ -20,13 +20,13 @@ export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 export CUDA_LAUNCH_BLOCKING=1
 export TORCH_DISTRIBUTED_DEBUG=INFO
 
-srun --unbuffered --export=ALL shifter python -m scripts.train \
-    --config-path ./configs/train_LorentzParT.yaml \
+srun --unbuffered --export=ALL shifter python -m scripts.train_ParT \
+    --config-path ./configs/train_ParT.yaml \
     --train-data-dir ./data/train_100M \
     --val-data-dir ./data/val_5M
 
 # Remember to change --best-model-path to the path of the best model you want to evaluate
-srun --unbuffered --export=ALL shifter python -m scripts.evaluate \
-    --config-path ./configs/train_LorentzParT.yaml \
-    --best-model-path ./logs/LorentzParT/best/run_03.pt \
+srun --unbuffered --export=ALL shifter python -m scripts.evaluate_ParT \
+    --config-path ./configs/train_ParT.yaml \
+    --best-model-path ./logs/ParticleTransformer/best/run_01.pt \
     --test-data-dir ./data/test_20M
