@@ -120,6 +120,7 @@ class InteractionEmbedding(nn.Module):
                 nn.GELU()
             ])
             input_dim = dim
+            
         self.embed = nn.Sequential(*layers)
 
     def forward(self, U: Tensor) -> Tensor:

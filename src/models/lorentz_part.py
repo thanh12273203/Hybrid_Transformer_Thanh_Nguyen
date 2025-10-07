@@ -45,7 +45,7 @@ class LorentzParTEncoder(nn.Module):
         ])
     
     def forward(self, x: Tensor, padding_mask: Tensor, U: Tensor) -> Tensor:
-        B, N, F = x.shape  # (batch_size, max_num_particles, num_particle_features)
+        B, N, F = x.shape  # (batch_size, max_num_particles, 16)
 
         # Embed interaction features
         U = self.interaction_embed(U)  # (B * num_heads, N, N)

@@ -40,6 +40,8 @@ class MaskedModelTrainer(Trainer):
         Loss function configuration. Overrides config if provided.
     optimizer: Dict, optional
         Optimizer configuration. Overrides config if provided.
+    optimizer_wrapper: Dict, optional
+        Optimizer wrapper configuration. Overrides config if provided.
     scheduler: Dict, optional
         Learning rate scheduler configuration. Overrides config if provided.
     callbacks: List[Dict], optional

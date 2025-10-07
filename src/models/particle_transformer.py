@@ -62,6 +62,11 @@ class ParticleTransformerEncoder(nn.Module):
         pair_embed_dims: List[int] = [64, 64, 64]
     ):
         super(ParticleTransformerEncoder, self).__init__()
+        self.feedforward = Feedforward(
+            embed_dim=embed_dim,
+            expansion_factor=expansion_factor,
+            dropout=dropout
+        )
         self.proj = nn.Linear(4, embed_dim)
         self.interaction_embed = InteractionEmbedding(
             num_interaction_features=4,
@@ -75,7 +80,6 @@ class ParticleTransformerEncoder(nn.Module):
                 expansion_factor=expansion_factor
             ) for _ in range(num_layers)
         ])
-        self.linear = nn.Linear(embed_dim, 16)
     
     def forward(self, x: Tensor, padding_mask: Tensor, U: Tensor) -> Tensor:
         B, N, F = x.shape  # (batch_size, max_num_particles, num_particle_features)
@@ -85,6 +89,9 @@ class ParticleTransformerEncoder(nn.Module):
 
         # Project input features to embedding dimension
         x = self.proj(x)  # (B, N, embed_dim)
+
+        # Pass through the Feedforward layer
+        x = self.feedforward(x)  # (B, N, embed_dim)
 
         # Encoder with particle attention blocks
         for layer in self.encoder:

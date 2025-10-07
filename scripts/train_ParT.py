@@ -7,7 +7,7 @@ import torch
 import torch.multiprocessing as mp
 
 from src.configs import ParticleTransformerConfig, TrainConfig
-from src.engine import Trainer, MaskedModelTrainer
+from src.engine import JetClassTrainer, MaskedModelTrainer
 from src.models import ParticleTransformer
 from src.utils import accuracy_metric_ce, set_seed, setup_ddp, cleanup_ddp
 from src.utils.data import LazyJetClassDataset
@@ -84,7 +84,7 @@ def main(
             config=train_config
         )
     else:
-        trainer = Trainer(
+        trainer = JetClassTrainer(
             model=model,
             train_dataset=train_dataset,
             val_dataset=val_dataset,

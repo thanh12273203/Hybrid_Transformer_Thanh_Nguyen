@@ -30,6 +30,11 @@ train:
         kwargs:
             lr: 0.001
             weight_decay: 0.0
+    # optimizer_wrapper:
+    #     name: 'lookahead'
+    #     kwargs:
+    #         la_steps: 6
+    #         la_alpha: 0.5
     scheduler:
         # All supported schedulers can be found in 'src/optim/scheduler_registry.py'
         name: 'exponential_lr'

@@ -1,6 +1,4 @@
 import os
-import re
-import csv
 from typing import List, Tuple, Dict, Callable, Optional, Union
 
 import numpy as np
@@ -9,33 +7,18 @@ from tqdm.auto import tqdm
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torch.distributed import (
-    is_available, is_initialized,
-    get_rank, get_world_size,
-    all_gather, all_gather_object
-)
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import Dataset, DataLoader
+from torch.distributed import all_gather, all_gather_object
 
-from ..configs import TrainConfig
-from ..loss import LOSS_REGISTRY
-from ..optim import OPTIM_REGISTRY, SCHEDULER_REGISTRY
-from ..utils import (
-    CALLBACK_REGISTRY,
-    get_loss_from_config,
-    get_optim_from_config,
-    get_optim_wrapper_from_config,
-    get_scheduler_from_config,
-    get_callbacks_from_config,
-    cleanup_ddp
-)
+from .trainer import Trainer
+from ..utils import cleanup_ddp
 from ..utils.data import JetClassDistributedSampler
 from ..utils.viz import *
 
 
-class Trainer:
+class JetClassTrainer(Trainer):
     """
-    Base class for training models.
+    Trainer class for training models on the JetClass dataset. This Trainer follows the setup in
+    [Particle Transformer for Jet Tagging](https://arxiv.org/abs/2202.03772).
     
     Parameters
     ----------
@@ -88,276 +71,8 @@ class Trainer:
     pin_memory: bool, optional
         Whether to use pinned memory for data loading. Overrides config if provided.
     """
-    def __init__(
-        self,
-        model: nn.Module,
-        train_dataset: Dataset,
-        val_dataset: Dataset,
-        test_dataset: Optional[Dataset] = None,
-        device: Optional[Union[torch.device, int]] = None,
-        metric: Optional[Callable] = None,
-        config: Optional[TrainConfig] = None,
-        # Parameters below can override config if supplied explicitly
-        batch_size: Optional[int] = None,
-        criterion: Optional[Dict] = None,
-        optimizer: Optional[Dict] = None,
-        optimizer_wrapper: Optional[Dict] = None,
-        scheduler: Optional[Dict] = None,
-        callbacks: Optional[List[Dict]] = None,
-        num_epochs: Optional[int] = None,
-        start_epoch: Optional[int] = None,
-        history: Optional[Dict[str, List[float]]] = None,
-        logging_dir: Optional[str] = None,
-        logging_steps: Optional[int] = None,
-        progress_bar: Optional[bool] = None,
-        save_best: Optional[bool] = None,
-        save_ckpt: Optional[bool] = None,
-        save_fig: Optional[bool] = None,
-        num_workers: Optional[int] = None,
-        pin_memory: Optional[bool] = None
-    ):
-        self.rank = 0
-        self.world_size = 1
-
-        # Prepare the device for multi-GPU training if available
-        if is_available() and is_initialized():
-            self.rank = get_rank()
-            self.world_size = get_world_size()
-        if device is not None:
-            self.device = device
-        else:
-            if torch.cuda.is_available():
-                self.device = torch.device(f'cuda:{self.rank}')
-            else:
-                self.device = torch.device('cpu')
-
-        # Prepare the model for multi-GPU training if available
-        self.model = model.to(self.device)
-        self._is_distributed = self.world_size > 1
-        if self._is_distributed:
-            self.model = DDP(
-                module=self.model,
-                device_ids=[self.device],
-                output_device=self.device,
-                find_unused_parameters=True,
-                gradient_as_bucket_view=True
-            )
-
-        # Use config if provided, otherwise use defaults
-        if config is not None:
-            self.batch_size = batch_size if batch_size is not None else config.batch_size
-            self.criterion = get_loss_from_config(criterion if criterion is not None else config.criterion, LOSS_REGISTRY)
-            self.optimizer = get_optim_from_config(optimizer if optimizer is not None else config.optimizer, OPTIM_REGISTRY, self.model)
-            if optimizer_wrapper is not None or config.optimizer_wrapper is not None:
-                self.optimizer = get_optim_wrapper_from_config(optimizer_wrapper if optimizer_wrapper is not None else config.optimizer_wrapper, OPTIM_REGISTRY, self.optimizer)
-            self.scheduler = get_scheduler_from_config(scheduler if scheduler is not None else config.scheduler, SCHEDULER_REGISTRY, self.optimizer)
-            self.callbacks = get_callbacks_from_config(callbacks if callbacks is not None else config.callbacks, CALLBACK_REGISTRY)
-            self.num_epochs = num_epochs if num_epochs is not None else config.num_epochs
-            self.start_epoch = start_epoch if start_epoch is not None else config.start_epoch
-            self.logging_dir = logging_dir if logging_dir is not None else config.logging_dir
-            self.logging_steps = logging_steps if logging_steps is not None else config.logging_steps
-            self.progress_bar = progress_bar if progress_bar is not None else config.progress_bar
-            self.save_best = save_best if save_best is not None else config.save_best
-            self.save_ckpt = save_ckpt if save_ckpt is not None else config.save_ckpt
-            self.save_fig = save_fig if save_fig is not None else config.save_fig
-            self.num_workers = num_workers if num_workers is not None else config.num_workers
-            self.pin_memory = pin_memory if pin_memory is not None else config.pin_memory
-        else:
-            self.batch_size = batch_size if batch_size is not None else 64
-            if criterion is None:
-                raise ValueError("Criterion must be provided if config is not supplied.")
-            self.criterion = get_loss_from_config(criterion, LOSS_REGISTRY)
-            if optimizer is None:
-                raise ValueError("Optimizer must be provided if config is not supplied.")
-            self.optimizer = get_optim_from_config(optimizer, OPTIM_REGISTRY, self.model)
-            if optimizer_wrapper is not None:
-                self.optimizer = get_optim_wrapper_from_config(optimizer_wrapper, OPTIM_REGISTRY, self.optimizer)
-            self.scheduler = get_scheduler_from_config(scheduler, SCHEDULER_REGISTRY, self.optimizer) if scheduler else None
-            self.callbacks = get_callbacks_from_config(callbacks, CALLBACK_REGISTRY) if callbacks is not None else None
-            self.num_epochs = num_epochs if num_epochs is not None else 20
-            self.start_epoch = start_epoch if start_epoch is not None else 0
-            self.logging_dir = logging_dir if logging_dir is not None else 'logs'
-            self.logging_steps = logging_steps if logging_steps is not None else 25
-            self.progress_bar = progress_bar if progress_bar is not None else True
-            self.save_best = save_best if save_best is not None else True
-            self.save_ckpt = save_ckpt if save_ckpt is not None else True
-            self.save_fig = save_fig if save_fig is not None else False
-            self.num_workers = num_workers if num_workers is not None else 0
-            self.pin_memory = pin_memory if pin_memory is not None else False
-        
-        # Initialize data samplers for distributed training
-        train_sampler = JetClassDistributedSampler(
-            files_by_class=train_dataset.files_by_class,
-            events_per_file=train_dataset.events_per_file,
-            batch_size=self.batch_size,
-            rank=self.rank,
-            world_size=self.world_size,
-            shuffle_files=True
-        ) if self._is_distributed else None
-        val_sampler = JetClassDistributedSampler(
-            files_by_class=val_dataset.files_by_class,
-            events_per_file=val_dataset.events_per_file,
-            batch_size=self.batch_size,
-            rank=self.rank,
-            world_size=self.world_size,
-            shuffle_files=False
-        ) if self._is_distributed else None
-        test_sampler = JetClassDistributedSampler(
-            files_by_class=test_dataset.files_by_class,
-            events_per_file=test_dataset.events_per_file,
-            batch_size=self.batch_size,
-            rank=self.rank,
-            world_size=self.world_size,
-            shuffle_files=False
-        ) if (test_dataset is not None and self._is_distributed) else None
-
-        # Initialize data loaders
-        if self._is_distributed:
-            self.train_loader = DataLoader(
-                dataset=train_dataset,
-                batch_sampler=train_sampler,
-                num_workers=self.num_workers,
-                pin_memory=self.pin_memory
-            )
-            self.val_loader = DataLoader(
-                dataset=val_dataset,
-                batch_sampler=val_sampler,
-                num_workers=self.num_workers,
-                pin_memory=self.pin_memory
-            )
-            self.test_loader = DataLoader(
-                dataset=test_dataset,
-                batch_sampler=test_sampler,
-                num_workers=self.num_workers,
-                pin_memory=self.pin_memory
-            ) if test_dataset is not None else None
-        else:
-            self.train_loader = DataLoader(
-                dataset=train_dataset,
-                batch_size=self.batch_size,
-                shuffle=True,
-                num_workers=self.num_workers,
-                pin_memory=self.pin_memory
-            )
-            self.val_loader = DataLoader(
-                dataset=val_dataset,
-                batch_size=self.batch_size,
-                shuffle=False,
-                num_workers=self.num_workers,
-                pin_memory=self.pin_memory
-            )
-            self.test_loader = DataLoader(
-                dataset=test_dataset,
-                batch_size=self.batch_size,
-                shuffle=False,
-                num_workers=self.num_workers,
-                pin_memory=self.pin_memory
-            ) if test_dataset is not None else None
-
-        # Initialize metrics and history
-        self.metric = metric
-        self.history = history or {
-            'epoch': [],
-            'train_loss': [],
-            'train_metric': [],
-            'val_loss': [],
-            'val_metric': []
-        }
-        self.best_val_loss = min(self.history['val_loss']) if self.history['val_loss'] else float('inf')
-
-        # Initialize the logging directory
-        if isinstance(self.model, DDP):
-            self.model_name = self.model.module.__class__.__name__
-        else:
-            self.model_name = self.model.__class__.__name__
-            
-        os.makedirs(self.logging_dir, exist_ok=True)
-        self.log_dir = os.path.join(self.logging_dir, self.model_name)
-        os.makedirs(self.log_dir, exist_ok=True)
-
-        # Subfolders
-        self.best_models_dir = os.path.join(self.log_dir, 'best')
-        self.checkpoints_dir = os.path.join(self.log_dir, 'checkpoints')
-        self.loggings_dir = os.path.join(self.log_dir, 'logging')
-        self.outputs_dir = os.path.join(self.log_dir, 'output')
-        os.makedirs(self.best_models_dir, exist_ok=True)
-        os.makedirs(self.checkpoints_dir, exist_ok=True)
-        os.makedirs(self.loggings_dir, exist_ok=True)
-        os.makedirs(self.outputs_dir, exist_ok=True)
-
-        # Determine run index
-        run_index = self._get_next_run_index(self.loggings_dir, 'run', '.csv')
-        self.run_name = f"run_{run_index:02d}"
-
-        # Logging and best model paths
-        self._log_header_written = False
-        self.best_model_path = os.path.join(self.best_models_dir, f"{self.run_name}.pt") if self.save_best else None
-        self.checkpoint_path = os.path.join(self.checkpoints_dir, f"{self.run_name}.pt") if self.save_ckpt else None
-        self.logging_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
-
-    def _get_next_run_index(self, directory: str, prefix: str, suffix: str) -> int:
-        os.makedirs(directory, exist_ok=True)
-        existing = [
-            f for f in os.listdir(directory)
-            if f.startswith(prefix) and f.endswith(suffix)
-        ]
-        indices = [
-            int(m.group(1)) for f in existing
-            if (m := re.search(rf"{prefix}_(\d+)", f))
-        ]
-
-        return max(indices, default=0) + 1
-
-    def _set_logging_paths(self, run_name: str):
-        self.run_name = run_name
-        self._log_header_written = True
-        self.best_model_path = os.path.join(self.best_models_dir, f"{self.run_name}.pt") if self.save_best else None
-        self.checkpoint_path = os.path.join(self.checkpoints_dir, f"{self.run_name}.pt") if self.save_ckpt else None
-        self.logging_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
-
-    def save_checkpoint(self, epoch: int):
-        model_state = self.model.module.state_dict() if self._is_distributed else self.model.state_dict()
-        if self.checkpoint_path and self.rank == 0:
-            checkpoint = {
-                'run_name': self.run_name,
-                'epoch': epoch,
-                'model_state_dict': model_state,
-                'optimizer_state_dict': self.optimizer.state_dict(),
-                'scheduler_state_dict': self.scheduler.state_dict() if self.scheduler else None,
-                'history': self.history
-            }
-            torch.save(checkpoint, self.checkpoint_path)
-
-    def load_checkpoint(self, checkpoint_path: str):
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
-        self._set_logging_paths(checkpoint['run_name'])
-        target = self.model.module if self._is_distributed else self.model
-        target.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        if self.scheduler is not None and checkpoint['scheduler_state_dict'] is not None:
-            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-
-        self.start_epoch = checkpoint['epoch']
-        self.history = checkpoint['history']
-    
-    def load_best_model(self, best_model_path: str):
-        run_name = os.path.splitext(os.path.basename(best_model_path))[0]
-        self._set_logging_paths(run_name)
-        target = self.model.module if self._is_distributed else self.model
-        target.load_state_dict(torch.load(best_model_path, map_location=self.device))
-
-    def log_csv(self, log_dict: Dict[str, float]):
-        if self.rank != 0:
-            return
-        
-        write_header = not self._log_header_written
-        with open(self.logging_path, 'a', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=log_dict.keys())
-            if write_header:
-                writer.writeheader()
-                self._log_header_written = True
-
-            writer.writerow(log_dict)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def train(self) -> Tuple[Dict[str, List[float]], nn.Module]:
         try:
@@ -416,6 +131,10 @@ class Trainer:
 
                     avg_loss = running_loss_sum / running_count
                     avg_metric = (running_metric_sum / running_count) if self.metric else 0.0
+
+                    # Update scheduler based on paper's setup
+                    if self.scheduler and (step > total_steps * 0.7 and step % (total_steps * 0.3 // 15) == 0):
+                            self.scheduler.step()
 
                     # Short summary
                     if self.rank == 0:
@@ -484,9 +203,6 @@ class Trainer:
                         f"val_loss: {val_loss:.4f} | "
                         f"val_metric: {val_metric:.4f}"
                     )
-
-                if self.scheduler:
-                    self.scheduler.step()
 
                 # Get learning rate
                 current_lr = self.optimizer.param_groups[0]['lr']

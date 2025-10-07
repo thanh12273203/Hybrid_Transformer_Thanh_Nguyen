@@ -90,7 +90,7 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         # Cover exactly all events in each file per epoch
         assert self.events_per_file % self.per_file_global == 0, \
         f"events_per_file ({self.events_per_file}) must be divisible by per_file_global ({self.per_file_global})."
-        self.steps_per_file = self.events_per_file // self.per_file_global
+        self.steps_per_file = self.events_per_file // self.per_file_global  # 100K / 200 = 500
 
         self.seed = int(seed) if seed is not None else int(torch.initial_seed() % 2**32)
         self.epoch = 0
@@ -99,7 +99,7 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         self.epoch = int(epoch)
 
     def __len__(self) -> int:
-        return self.num_groups * self.steps_per_file  # 100 * 1K = 100K
+        return self.num_groups * self.steps_per_file  # 100 * 500 = 50K
 
     def _file_orders_for_epoch(self) -> List[List[int]]:
         # Optionally shuffle the files per class; deterministic per epoch
