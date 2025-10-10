@@ -64,7 +64,7 @@ class ParticleTransformerEncoder(nn.Module):
         super(ParticleTransformerEncoder, self).__init__()
         self.feedforward = Feedforward(
             embed_dim=embed_dim,
-            expansion_factor=expansion_factor,
+            expansion_factor=expansion_factor // 2,
             dropout=dropout
         )
         self.proj = nn.Linear(4, embed_dim)
@@ -215,6 +215,11 @@ class ParticleTransformer(nn.Module):
         )
 
         # For self-supervised learning
+        self.feedforward = Feedforward(
+            embed_dim=self.embed_dim,
+            expansion_factor=self.expansion_factor // 2,
+            dropout=self.dropout
+        )
         self.fc = nn.Linear(self.max_num_particles * self.embed_dim, self.num_particle_features)
 
         # For classification
@@ -278,6 +283,7 @@ class ParticleTransformer(nn.Module):
 
             return output
         else:
+            x = self.feedforward(x)  # (B, N, embed_dim)
             x = x.view(B, -1)  # (B, N * embed_dim)
             x = self.fc(x)  # (B, F)
 

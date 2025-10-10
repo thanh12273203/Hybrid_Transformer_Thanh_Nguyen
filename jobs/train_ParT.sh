@@ -2,8 +2,8 @@
 #SBATCH -A m4392
 #SBATCH -C gpu
 #SBATCH -N 1
-#SBATCH -q debug
-#SBATCH -t 00:10:00
+#SBATCH -q regular
+#SBATCH -t 48:00:00
 #SBATCH --ntasks-per-node 1
 #SBATCH --gpus-per-task 4
 #SBATCH --cpus-per-task 128

@@ -69,8 +69,6 @@ class Trainer:
         Number of epochs to train for. Overrides config if provided.
     start_epoch: int, optional
         Epoch to start training from. Overrides config if provided.
-    history: Dict[str, List[float]], optional
-        History of training metrics. If not provided, initializes an empty history.
     logging_dir: str, optional
         Directory to save logs. Overrides config if provided.
     logging_steps: int, optional
@@ -106,7 +104,6 @@ class Trainer:
         callbacks: Optional[List[Dict]] = None,
         num_epochs: Optional[int] = None,
         start_epoch: Optional[int] = None,
-        history: Optional[Dict[str, List[float]]] = None,
         logging_dir: Optional[str] = None,
         logging_steps: Optional[int] = None,
         progress_bar: Optional[bool] = None,
@@ -256,7 +253,7 @@ class Trainer:
 
         # Initialize metrics and history
         self.metric = metric
-        self.history = history or {
+        self.history = {
             'epoch': [],
             'train_loss': [],
             'train_metric': [],
@@ -337,7 +334,7 @@ class Trainer:
         if self.scheduler is not None and checkpoint['scheduler_state_dict'] is not None:
             self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
 
-        self.start_epoch = checkpoint['epoch']
+        self.start_epoch = checkpoint['epoch'] + 1
         self.history = checkpoint['history']
     
     def load_best_model(self, best_model_path: str):
@@ -531,8 +528,7 @@ class Trainer:
                 cb.on_train_end(trainer=self)
         except KeyboardInterrupt:
             if self.rank == 0:
-                print(f"\nTraining interrupted at epoch {epoch + 1}. Saving current checkpoint.")
-                self.save_checkpoint(epoch)
+                print(f"\nTraining interrupted at epoch {epoch + 1}.")
 
             cleanup_ddp()
 

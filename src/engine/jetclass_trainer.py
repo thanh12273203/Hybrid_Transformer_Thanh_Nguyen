@@ -52,8 +52,6 @@ class JetClassTrainer(Trainer):
         Number of epochs to train for. Overrides config if provided.
     start_epoch: int, optional
         Epoch to start training from. Overrides config if provided.
-    history: Dict[str, List[float]], optional
-        History of training metrics. If not provided, initializes an empty history.
     logging_dir: str, optional
         Directory to save logs. Overrides config if provided.
     logging_steps: int, optional
@@ -73,6 +71,13 @@ class JetClassTrainer(Trainer):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.history = {
+            'epoch': [],
+            'train_loss': [],
+            'train_metric': [],
+            'val_loss': [],
+            'val_metric': []
+        }
 
     def train(self) -> Tuple[Dict[str, List[float]], nn.Module]:
         try:
@@ -132,18 +137,14 @@ class JetClassTrainer(Trainer):
                     avg_loss = running_loss_sum / running_count
                     avg_metric = (running_metric_sum / running_count) if self.metric else 0.0
 
-                    # Update scheduler based on paper's setup
-                    if self.scheduler and (step > total_steps * 0.7 and step % (total_steps * 0.3 // 15) == 0):
-                            self.scheduler.step()
-
-                    # Short summary
+                    # Short summary for training
                     if self.rank == 0:
-                        if step % self.logging_steps == 0 or step == total_steps:
-                            tqdm.write(
-                                f"step: {step}/{total_steps} | "
-                                f"train_loss: {avg_loss:.4f} | "
-                                f"train_metric: {avg_metric:.4f}"
-                            )
+                        # if step % self.logging_steps == 0 or step == total_steps:
+                        #     tqdm.write(
+                        #         f"step: {step}/{total_steps} | "
+                        #         f"train_loss: {avg_loss:.4f} | "
+                        #         f"train_metric: {avg_metric:.4f}"
+                        #     )
 
                         global_bar.set_postfix({
                             "epoch": f"{epoch + 1}/{self.num_epochs}",
@@ -151,88 +152,96 @@ class JetClassTrainer(Trainer):
                             "avg_metric": f"{avg_metric:.4f}"
                         })
 
+                    if step % self.logging_steps == 0 or step == total_steps:
+                        # Validation phase
+                        self.model.eval()
+                        val_loss_sum = 0.0
+                        val_metric_sum = 0.0
+                        val_count = 0
+
+                        with torch.no_grad():
+                            for X_val, y_val in self.val_loader:
+                                X_val = X_val.to(self.device, non_blocking=self.pin_memory)
+                                y_val = y_val.to(self.device, non_blocking=self.pin_memory)
+
+                                outputs_val = self.model(X_val)
+                                loss_val = self.criterion(outputs_val, y_val)
+                                bsz = y_val.size(0)
+                                val_loss_sum += float(loss_val.item()) * bsz
+
+                                if self.metric:
+                                    val_metric_sum += float(self.metric(outputs_val, y_val)) * bsz
+
+                                val_count += bsz
+
+                        # Gather validation results from all processes
+                        if self._is_distributed:
+                            packed = torch.tensor(
+                                data=[val_loss_sum, val_metric_sum, float(val_count)],
+                                dtype=torch.float64,
+                                device=self.device,
+                            )
+                            gathered = [torch.zeros_like(packed) for _ in range(self.world_size)]
+                            all_gather(gathered, packed)
+
+                            total_loss_sum = sum(g[0].item() for g in gathered)
+                            total_metric_sum = sum(g[1].item() for g in gathered)
+                            total_count = int(sum(g[2].item() for g in gathered))
+                        else:
+                            total_loss_sum = val_loss_sum
+                            total_metric_sum = val_metric_sum
+                            total_count = val_count
+
+                        # Global averages
+                        val_loss = total_loss_sum / max(total_count, 1)
+                        val_metric = (total_metric_sum / max(total_count, 1)) if self.metric else 0.0
+
+                        # Short summary for validation
+                        if self.rank == 0:
+                            tqdm.write(
+                                f"epoch: {epoch + 1}/{self.num_epochs} | "
+                                f"val_loss: {val_loss:.4f} | "
+                                f"val_metric: {val_metric:.4f}"
+                            )
+
+                        # Get learning rate
+                        current_lr = self.optimizer.param_groups[0]['lr']
+
+                        # Save best model
+                        if self.best_model_path and self.rank == 0 and val_loss < self.best_val_loss:
+                            self.best_val_loss = val_loss
+                            to_save = self.model.module if self._is_distributed else self.model
+                            torch.save(to_save.state_dict(), self.best_model_path)
+
+                        # Update history
+                        self.history['step'].append(step)
+                        self.history['train_loss'].append(avg_loss)
+                        self.history['train_metric'].append(avg_metric)
+                        self.history['val_loss'].append(val_loss)
+                        self.history['val_metric'].append(val_metric)
+
+                        # Log results
+                        logs = {
+                            'step': step,
+                            'train_loss': avg_loss,
+                            'train_metric': avg_metric,
+                            'val_loss': val_loss,
+                            'val_metric': val_metric,
+                            'learning_rate': current_lr,
+                        }
+                        self.log_csv(logs)
+
+                        # Set the model back to train mode
+                        self.model.train()
+
+                    # Update scheduler based on paper's setup
+                    if self.scheduler and (step > total_steps * 0.7 and step % (total_steps * 0.3 // 15) == 0):
+                        self.scheduler.step()
+
                     global_bar.update(1)
-
-                # Validation phase
-                self.model.eval()
-                val_loss_sum = 0.0
-                val_metric_sum = 0.0
-                val_count = 0
-
-                with torch.no_grad():
-                    for X_val, y_val in self.val_loader:
-                        X_val = X_val.to(self.device, non_blocking=self.pin_memory)
-                        y_val = y_val.to(self.device, non_blocking=self.pin_memory)
-
-                        outputs_val = self.model(X_val)
-                        loss_val = self.criterion(outputs_val, y_val)
-                        bsz = y_val.size(0)
-                        val_loss_sum += float(loss_val.item()) * bsz
-
-                        if self.metric:
-                            val_metric_sum += float(self.metric(outputs_val, y_val)) * bsz
-
-                        val_count += bsz
-
-                # Gather validation results from all processes
-                if self._is_distributed:
-                    packed = torch.tensor(
-                        data=[val_loss_sum, val_metric_sum, float(val_count)],
-                        dtype=torch.float64,
-                        device=self.device,
-                    )
-                    gathered = [torch.zeros_like(packed) for _ in range(self.world_size)]
-                    all_gather(gathered, packed)
-
-                    total_loss_sum = sum(g[0].item() for g in gathered)
-                    total_metric_sum = sum(g[1].item() for g in gathered)
-                    total_count = int(sum(g[2].item() for g in gathered))
-                else:
-                    total_loss_sum = val_loss_sum
-                    total_metric_sum = val_metric_sum
-                    total_count = val_count
-
-                # Global averages
-                val_loss = total_loss_sum / max(total_count, 1)
-                val_metric = (total_metric_sum / max(total_count, 1)) if self.metric else 0.0
-
-                # Short summary for validation
-                if self.rank == 0:
-                    tqdm.write(
-                        f"epoch: {epoch + 1}/{self.num_epochs} | "
-                        f"val_loss: {val_loss:.4f} | "
-                        f"val_metric: {val_metric:.4f}"
-                    )
-
-                # Get learning rate
-                current_lr = self.optimizer.param_groups[0]['lr']
-
-                # Save best model
-                if self.best_model_path and self.rank == 0 and val_loss < self.best_val_loss:
-                    self.best_val_loss = val_loss
-                    to_save = self.model.module if self._is_distributed else self.model
-                    torch.save(to_save.state_dict(), self.best_model_path)
-
-                # Update history
-                self.history['epoch'].append(epoch + 1)
-                self.history['train_loss'].append(avg_loss)
-                self.history['train_metric'].append(avg_metric)
-                self.history['val_loss'].append(val_loss)
-                self.history['val_metric'].append(val_metric)
 
                 # Save a checkpoint every epoch
                 self.save_checkpoint(epoch)
-
-                # Log results
-                logs = {
-                    'epoch': epoch + 1,
-                    'train_loss': avg_loss,
-                    'train_metric': avg_metric,
-                    'val_loss': val_loss,
-                    'val_metric': val_metric,
-                    'learning_rate': current_lr,
-                }
-                self.log_csv(logs)
 
                 # Callback after each epoch
                 for cb in self.callbacks:
@@ -247,8 +256,7 @@ class JetClassTrainer(Trainer):
                 cb.on_train_end(trainer=self)
         except KeyboardInterrupt:
             if self.rank == 0:
-                print(f"\nTraining interrupted at epoch {epoch + 1}. Saving current checkpoint.")
-                self.save_checkpoint(epoch)
+                print(f"\nTraining interrupted at epoch {epoch + 1}.")
 
             cleanup_ddp()
 

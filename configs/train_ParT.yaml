@@ -17,7 +17,7 @@ model:
 
 
 train:
-    batch_size: 2000  # must be divisible by 10
+    batch_size: 500  # must be divisible by 10
     criterion:
         # All supported loss functions can be found in 'src/loss/loss_registry.py'
         name: 'conservation_loss'
@@ -28,7 +28,7 @@ train:
         # All supported optimizers can be found in 'src/optim/optim_registry.py'
         name: 'adamw'
         kwargs:
-            lr: 0.001
+            lr: 0.0001
             weight_decay: 0.0
     # optimizer_wrapper:
     #     name: 'lookahead'
@@ -51,7 +51,7 @@ train:
     num_epochs: 5
     start_epoch: 0
     logging_dir: 'logs'
-    logging_steps: 5000
+    logging_steps: 20000
     progress_bar: False
     save_best: True
     save_ckpt: True

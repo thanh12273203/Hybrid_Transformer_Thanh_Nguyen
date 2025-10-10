@@ -50,8 +50,6 @@ class MaskedModelTrainer(Trainer):
         Number of epochs to train for. Overrides config if provided.
     start_epoch: int, optional
         Epoch to start training from. Overrides config if provided.
-    history: Dict[str, List[float]], optional
-        History of training metrics. If not provided, initializes an empty history.
     logging_dir: str, optional
         Directory to save logs. Overrides config if provided.
     logging_steps: int, optional
@@ -72,7 +70,7 @@ class MaskedModelTrainer(Trainer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.history = {
-            'epoch': [], 
+            'step': [], 
             'pT_loss': [],
             'eta_loss': [],
             'phi_loss': [],
@@ -234,11 +232,11 @@ class MaskedModelTrainer(Trainer):
                     torch.save(to_save.state_dict(), self.best_model_path)
 
                 # Update history
-                self.history['epoch'].append(epoch + 1)
-                self.history['pT_loss'].append(avg_components[0])
-                self.history['eta_loss'].append(avg_components[1])
-                self.history['phi_loss'].append(avg_components[2])
-                self.history['energy_loss'].append(avg_components[3])
+                self.history['step'].append(epoch + 1)
+                self.history['pT_loss'].append(avg_val_components[0])
+                self.history['eta_loss'].append(avg_val_components[1])
+                self.history['phi_loss'].append(avg_val_components[2])
+                self.history['energy_loss'].append(avg_val_components[3])
                 self.history['val_loss'].append(val_loss)
 
                 # Save a checkpoint every epoch
@@ -266,8 +264,7 @@ class MaskedModelTrainer(Trainer):
                 cb.on_train_end(trainer=self)
         except KeyboardInterrupt:
             if self.rank == 0:
-                print(f"\nTraining interrupted at epoch {epoch + 1}. Saving current checkpoint.")
-                self.save_checkpoint(epoch)
+                print(f"\nTraining interrupted at epoch {epoch + 1}.")
 
             cleanup_ddp()
 
