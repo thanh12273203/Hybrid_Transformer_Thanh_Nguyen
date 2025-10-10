@@ -70,11 +70,8 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
 
         # Match DDP world_size when replicas_per_rank = 4
         self.rank = int(rank)
-        self.world_size = int(world_size)  # 4
-
-        self.batch_size_global = int(batch_size)  # 2000
-        assert self.batch_size_global % (self.world_size * 10) == 0, \
-        f"batch_size must be divisible by {self.world_size * 10}."
+        self.world_size = int(world_size)
+        self.batch_size_global = int(batch_size)
 
         # Stronger guarantee if using world_size > 1
         if self.world_size > 1:
@@ -82,15 +79,15 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
             f"with world_size > 1, batch_size must be divisible by {self.world_size * 10}."
 
         # Per-(virtual)rank batch size and per-file local draw
-        self.local_batch_size = self.batch_size_global // self.world_size  # 500
+        self.local_batch_size = self.batch_size_global // self.world_size
         assert self.local_batch_size % 10 == 0, "local_batch_size must be divisible by 10."
-        self.per_file_local = self.local_batch_size // 10  # per rank, per file, per step (50)
-        self.per_file_global = self.per_file_local * self.world_size  # across all ranks, per file, per step (200)
+        self.per_file_local = self.local_batch_size // 10  # per rank, per file, per step
+        self.per_file_global = self.per_file_local * self.world_size  # across all ranks, per file, per step
 
         # Cover exactly all events in each file per epoch
         assert self.events_per_file % self.per_file_global == 0, \
         f"events_per_file ({self.events_per_file}) must be divisible by per_file_global ({self.per_file_global})."
-        self.steps_per_file = self.events_per_file // self.per_file_global  # 100K / 200 = 500
+        self.steps_per_file = self.events_per_file // self.per_file_global
 
         self.seed = int(seed) if seed is not None else int(torch.initial_seed() % 2**32)
         self.epoch = 0
@@ -99,7 +96,7 @@ class JetClassDistributedSampler(Sampler[List[SampleKey]]):
         self.epoch = int(epoch)
 
     def __len__(self) -> int:
-        return self.num_groups * self.steps_per_file  # 100 * 500 = 50K
+        return self.num_groups * self.steps_per_file
 
     def _file_orders_for_epoch(self) -> List[List[int]]:
         # Optionally shuffle the files per class; deterministic per epoch

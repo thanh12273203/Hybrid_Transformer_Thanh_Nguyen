@@ -17,7 +17,7 @@ model:
 
 
 train:
-    batch_size: 500  # must be divisible by 10
+    batch_size: 1000  # must be divisible by 10
     criterion:
         # All supported loss functions can be found in 'src/loss/loss_registry.py'
         name: 'conservation_loss'
@@ -51,7 +51,7 @@ train:
     num_epochs: 5
     start_epoch: 0
     logging_dir: 'logs'
-    logging_steps: 20000
+    logging_steps: 10000
     progress_bar: False
     save_best: True
     save_ckpt: True

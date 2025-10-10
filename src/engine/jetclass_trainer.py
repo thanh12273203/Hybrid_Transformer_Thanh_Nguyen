@@ -71,22 +71,52 @@ class JetClassTrainer(Trainer):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.history = {
-            'epoch': [],
-            'train_loss': [],
-            'train_metric': [],
-            'val_loss': [],
-            'val_metric': []
-        }
+        self.start_step = 0
+        if self.history is None:
+            self.history = {
+                'step': [],
+                'train_loss': [],
+                'train_metric': [],
+                'val_loss': [],
+                'val_metric': []
+            }
+
+    def save_checkpoint(self, epoch: int, step: int):
+        model_state = self.model.module.state_dict() if self._is_distributed else self.model.state_dict()
+        if self.checkpoint_path and self.rank == 0:
+            checkpoint = {
+                'run_name': self.run_name,
+                'epoch': epoch,
+                'step': step,
+                'model_state_dict': model_state,
+                'optimizer_state_dict': self.optimizer.state_dict(),
+                'scheduler_state_dict': self.scheduler.state_dict() if self.scheduler else None,
+                'history': self.history
+            }
+            torch.save(checkpoint, self.checkpoint_path)
+
+    def load_checkpoint(self, checkpoint_path: str):
+        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        self._set_logging_paths(checkpoint['run_name'])
+        target = self.model.module if self._is_distributed else self.model
+        target.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if self.scheduler is not None and checkpoint['scheduler_state_dict'] is not None:
+            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+
+        self.start_epoch = checkpoint['epoch']
+        self.start_step = checkpoint['step']
+        self.history = checkpoint['history']
 
     def train(self) -> Tuple[Dict[str, List[float]], nn.Module]:
         try:
             # Callback before training
             for cb in self.callbacks:
                 cb.on_train_begin(trainer=self)
-
+            
+            # Support resuming from a specific global step
             total_steps = self.num_epochs * len(self.train_loader)
-            start_step = self.start_epoch * len(self.train_loader)
+            start_step = self.start_step if self.start_step > 0 else self.start_epoch * len(self.train_loader)
             if self.progress_bar and self.rank == 0:
                 global_bar = tqdm(
                     total=total_steps,
@@ -117,6 +147,11 @@ class JetClassTrainer(Trainer):
 
                 for batch_idx, (X, y) in enumerate(self.train_loader):
                     step = epoch * len(self.train_loader) + batch_idx + 1
+                    
+                    # Fast-forward to the saved step without doing work
+                    if step <= start_step:
+                        global_bar.update(1)
+                        continue
 
                     X = X.to(self.device, non_blocking=self.pin_memory)
                     y = y.to(self.device, non_blocking=self.pin_memory)
@@ -199,7 +234,7 @@ class JetClassTrainer(Trainer):
                         # Short summary for validation
                         if self.rank == 0:
                             tqdm.write(
-                                f"epoch: {epoch + 1}/{self.num_epochs} | "
+                                f"step: {step}/{total_steps} | "
                                 f"val_loss: {val_loss:.4f} | "
                                 f"val_metric: {val_metric:.4f}"
                             )
@@ -219,6 +254,9 @@ class JetClassTrainer(Trainer):
                         self.history['train_metric'].append(avg_metric)
                         self.history['val_loss'].append(val_loss)
                         self.history['val_metric'].append(val_metric)
+
+                        # Save checkpoint
+                        self.save_checkpoint(epoch, step)
 
                         # Log results
                         logs = {
@@ -241,7 +279,7 @@ class JetClassTrainer(Trainer):
                     global_bar.update(1)
 
                 # Save a checkpoint every epoch
-                self.save_checkpoint(epoch)
+                self.save_checkpoint(epoch, step)
 
                 # Callback after each epoch
                 for cb in self.callbacks:

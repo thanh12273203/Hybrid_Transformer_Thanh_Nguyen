@@ -20,12 +20,12 @@ model:
     num_particle_features: 4
     pair_embed_dims: [64, 64, 64]
     mask: False
-    weights: ./logs/LorentzParT/best/run_01.pt
+    weights: # ./logs/LorentzParT/best/run_01.pt
     inference: False
 
 
 train:
-    batch_size: 500  # must be divisible by 10
+    batch_size: 1000  # must be divisible by 10
     criterion:
         # All supported loss functions can be found in 'src/loss/loss_registry.py'
         name: 'cross_entropy_loss'
@@ -60,7 +60,7 @@ train:
     num_epochs: 5
     start_epoch: 0
     logging_dir: 'logs'
-    logging_steps: 20000
+    logging_steps: 10000
     progress_bar: False
     save_best: True
     save_ckpt: True
