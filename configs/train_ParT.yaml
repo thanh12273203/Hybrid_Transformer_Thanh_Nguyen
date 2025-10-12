@@ -11,7 +11,7 @@ model:
     max_num_particles: 128
     num_particle_features: 4
     pair_embed_dims: [64, 64, 64]
-    mask: True
+    mask: False
     weights: #./logs/ParticleTransformer/best/run_01.pt
     inference: False
 
@@ -20,26 +20,28 @@ train:
     batch_size: 1000  # must be divisible by 10
     criterion:
         # All supported loss functions can be found in 'src/loss/loss_registry.py'
-        name: 'conservation_loss'
+        name: 'cross_entropy_loss'
         kwargs:
             loss_coef: [0.25, 0.25, 0.25, 0.25]  # [pT, eta, phi, energy]
             reduction: 'mean'  # 'mean', 'sum', 'none'
     optimizer:
         # All supported optimizers can be found in 'src/optim/optim_registry.py'
-        name: 'adamw'
+        name: 'radam'
         kwargs:
-            lr: 0.0001
+            lr: 0.001
             weight_decay: 0.0
-    # optimizer_wrapper:
-    #     name: 'lookahead'
-    #     kwargs:
-    #         la_steps: 6
-    #         la_alpha: 0.5
+            betas: [0.95, 0.999]
+            eps: 0.00001  # only for 'radam'
+    optimizer_wrapper:
+        name: 'lookahead'
+        kwargs:
+            la_steps: 6
+            la_alpha: 0.5
     scheduler:
         # All supported schedulers can be found in 'src/optim/scheduler_registry.py'
         name: 'exponential_lr'
         kwargs:
-            gamma: 0.95
+            gamma: 0.736
     callbacks:
         # All supported callbacks can be found in 'src/utils/callbacks.py'
         - name: 'early_stopping'

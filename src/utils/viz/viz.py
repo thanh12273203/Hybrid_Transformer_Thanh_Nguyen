@@ -92,24 +92,24 @@ def plot_particle_reconstruction(y_true: np.ndarray, y_pred: np.ndarray, save_fi
 # Function to visualize the training progress
 def plot_history(history: Dict[str, List[float]], save_fig: Optional[str] = None) -> None:
     plt.figure(figsize=(12, 5))
-    steps = history['step']
+    epochs = history['epoch']
 
     # Plot training and validation loss
     plt.subplot(1, 2, 1)
-    plt.plot(steps, history['train_loss'], label="Train Loss")
-    plt.plot(steps, history['val_loss'], label="Validation Loss")
+    plt.plot(epochs, history['train_loss'], label="Train Loss")
+    plt.plot(epochs, history['val_loss'], label="Validation Loss")
     plt.title("Training and Validation Loss")
-    plt.xlabel("Step")
+    plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.legend()
     plt.grid(True)
 
     # Plot training and validation metric (accuracy, for example)
     plt.subplot(1, 2, 2)
-    plt.plot(steps, history['train_metric'], label="Train Accuracy")
-    plt.plot(steps, history['val_metric'], label="Validation Accuracy")
+    plt.plot(epochs, history['train_metric'], label="Train Accuracy")
+    plt.plot(epochs, history['val_metric'], label="Validation Accuracy")
     plt.title("Training and Validation Accuracy")
-    plt.xlabel("Step")
+    plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
     plt.legend()
     plt.grid(True)
