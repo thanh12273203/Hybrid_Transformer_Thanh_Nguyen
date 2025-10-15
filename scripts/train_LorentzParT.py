@@ -96,7 +96,6 @@ def main(
     # Resume checkpoint if provided
     if checkpoint_path and os.path.exists(checkpoint_path):
         print(f"Resuming from checkpoint: {checkpoint_path}")
-        
         try:
             trainer.load_checkpoint(checkpoint_path)
         except Exception as e:

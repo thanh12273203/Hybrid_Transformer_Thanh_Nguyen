@@ -1,7 +1,7 @@
 import os
-import re
 import csv
 from typing import List, Tuple, Dict, Callable, Optional, Union
+from datetime import datetime
 
 import numpy as np
 from tqdm.auto import tqdm
@@ -283,8 +283,7 @@ class Trainer:
         os.makedirs(self.outputs_dir, exist_ok=True)
 
         # Determine run index
-        run_index = self._get_next_run_index(self.loggings_dir, 'run', '.csv')
-        self.run_name = f"run_{run_index:02d}"
+        self.run_name = self._get_next_run_index()
 
         # Logging and best model paths
         self._log_header_written = False
@@ -292,18 +291,8 @@ class Trainer:
         self.checkpoint_path = os.path.join(self.checkpoints_dir, f"{self.run_name}.pt") if self.save_ckpt else None
         self.logging_path = os.path.join(self.loggings_dir, f"{self.run_name}.csv")
 
-    def _get_next_run_index(self, directory: str, prefix: str, suffix: str) -> int:
-        os.makedirs(directory, exist_ok=True)
-        existing = [
-            f for f in os.listdir(directory)
-            if f.startswith(prefix) and f.endswith(suffix)
-        ]
-        indices = [
-            int(m.group(1)) for f in existing
-            if (m := re.search(rf"{prefix}_(\d+)", f))
-        ]
-
-        return max(indices, default=0) + 1
+    def _get_next_run_index(self) -> str:
+        return f"pid{os.getpid()}_{datetime.now().strftime("%Y%m%d-%H%M%S")}"
 
     def _set_logging_paths(self, run_name: str):
         self.run_name = run_name
