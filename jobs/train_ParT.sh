@@ -24,9 +24,3 @@ srun --unbuffered --export=ALL shifter python -m scripts.train_ParT \
     --config-path ./configs/train_ParT.yaml \
     --train-data-dir ./data/train_100M \
     --val-data-dir ./data/val_5M
-
-# Remember to change --best-model-path to the path of the best model you want to evaluate
-srun --unbuffered --export=ALL shifter python -m scripts.evaluate_ParT \
-    --config-path ./configs/train_ParT.yaml \
-    --best-model-path ./logs/ParticleTransformer/best/run_01.pt \
-    --test-data-dir ./data/test_20M

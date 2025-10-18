@@ -12,7 +12,7 @@ model:
     num_particle_features: 4
     pair_embed_dims: [64, 64, 64]
     mask: False
-    weights: #./logs/ParticleTransformer/best/run_01.pt
+    weights: ./logs/ParticleTransformer/best/pid872604_20251016-120030.pt
     inference: False
 
 
