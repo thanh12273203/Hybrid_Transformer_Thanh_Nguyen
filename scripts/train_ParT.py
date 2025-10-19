@@ -38,6 +38,9 @@ def main(
     train_data_dir: str = './data/train_100M',
     val_data_dir: str = './data/val_5M'
 ):
+    # Reproducibility settings
+    set_seed(42)
+    
     # Load the YAML file
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
@@ -118,9 +121,6 @@ def main(
 if __name__ == '__main__':
     # Parse command-line arguments
     args = parse_args()
-
-    # Reproducibility settings
-    set_seed(42)
     
     # Multi-GPU processing
     world_size = torch.cuda.device_count()
