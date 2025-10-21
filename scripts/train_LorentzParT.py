@@ -111,11 +111,12 @@ def main(
     cleanup_ddp()
 
     # Save the training history plot
-    output_path = os.path.join(trainer.outputs_dir, f"{trainer.run_name}.png") if train_config.save_fig else None
-    if model_config.mask:
-        plot_ssl_history(history, save_fig=output_path)
-    else:
-        plot_history(history, save_fig=output_path)
+    if rank == 0:
+        output_path = os.path.join(trainer.outputs_dir, f"{trainer.run_name}.png") if train_config.save_fig else None
+        if model_config.mask:
+            plot_ssl_history(history, save_fig=output_path)
+        else:
+            plot_history(history, save_fig=output_path)
 
 
 if __name__ == '__main__':

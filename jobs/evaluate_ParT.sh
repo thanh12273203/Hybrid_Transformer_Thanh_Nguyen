@@ -22,5 +22,5 @@ export TORCH_DISTRIBUTED_DEBUG=INFO
 
 srun --unbuffered --export=ALL shifter python -m scripts.evaluate_ParT \
     --config-path ./configs/train_ParT.yaml \
-    --best-model-path ./logs/ParticleTransformer/best/run_01.pt \
+    --best-model-path ./logs/ParticleTransformer/best/pid1751293_20251018-232100.pt \
     --test-data-dir ./data/test_20M
