@@ -20,6 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train ParticleTransformer from YAML config")
 
     # Model and configurations arguments
+    parser.add_argument('--seed', type=int, default=42, help="Random seed for reproducibility")
     parser.add_argument('--config-path', type=str, default='./configs/train_ParT.yaml', help="Path to YAML config")
     parser.add_argument('--checkpoint-path', type=str, default=None, help="Checkpoint to restore trainer state")
 
@@ -33,13 +34,14 @@ def parse_args() -> argparse.Namespace:
 def main(
     rank: int,
     world_size: int,
+    seed: int,
     config_path: str,
     checkpoint_path: str = None,
     train_data_dir: str = './data/train_100M',
     val_data_dir: str = './data/val_5M'
 ):
     # Reproducibility settings
-    set_seed(42)
+    set_seed(seed)
     
     # Load the YAML file
     with open(config_path, 'r') as f:
@@ -130,6 +132,7 @@ if __name__ == '__main__':
             main,
             args=(
                 world_size,
+                args.seed,
                 args.config_path,
                 args.checkpoint_path,
                 args.train_data_dir,
@@ -142,6 +145,7 @@ if __name__ == '__main__':
         main(
             rank=0,
             world_size=1,
+            seed=args.seed,
             config_path=args.config_path,
             checkpoint_path=args.checkpoint_path,
             train_data_dir=args.train_data_dir,
