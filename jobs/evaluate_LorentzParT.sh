@@ -21,6 +21,6 @@ export CUDA_LAUNCH_BLOCKING=1
 export TORCH_DISTRIBUTED_DEBUG=INFO
 
 srun --unbuffered --export=ALL shifter python -m scripts.evaluate_LorentzParT \
-    --config-path ./configs/pretrain_LorentzParT.yaml \
-    --best-model-path ./logs/LorentzParT/best/pid1356202_20251022-172459.pt \
+    --config-path ./configs/train_LorentzParT.yaml \
+    --best-model-path ./logs/LorentzParT/best/pretrained_clf_43.pt \
     --test-data-dir ./data/test_20M
