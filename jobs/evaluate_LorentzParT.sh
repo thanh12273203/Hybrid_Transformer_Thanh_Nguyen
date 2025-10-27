@@ -22,5 +22,5 @@ export TORCH_DISTRIBUTED_DEBUG=INFO
 
 srun --unbuffered --export=ALL shifter python -m scripts.evaluate_LorentzParT \
     --config-path ./configs/train_LorentzParT.yaml \
-    --best-model-path ./logs/LorentzParT/best/pretrained_clf_43.pt \
+    --best-model-path ./logs/LorentzParT/best/pretrained_clf_42.pt \
     --test-data-dir ./data/test_20M
