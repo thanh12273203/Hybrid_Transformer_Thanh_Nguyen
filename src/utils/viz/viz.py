@@ -147,7 +147,7 @@ def plot_ssl_history(history: Dict[str, List[float]], save_fig: Optional[str] = 
 def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, labels: Optional[List[str]] = None, save_fig: Optional[str] = None) -> None:
     y_true_classes = np.argmax(y_true, axis=1)
     y_pred_classes = np.argmax(y_pred, axis=1)
-    cm = confusion_matrix(y_true_classes, y_pred_classes,labels=np.arange(y_true.shape[1]))
+    cm = confusion_matrix(y_true_classes, y_pred_classes, labels=np.arange(y_true.shape[1]))
     cm = cm / 1000
 
     if labels is None:
