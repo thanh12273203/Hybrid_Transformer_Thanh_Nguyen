@@ -21,7 +21,7 @@ export CUDA_LAUNCH_BLOCKING=1
 export TORCH_DISTRIBUTED_DEBUG=INFO
 
 srun --unbuffered --export=ALL shifter python -m scripts.train_ParT \
-    --seed 44 \
+    --seed 48 \
     --config-path ./configs/train_ParT.yaml \
     --train-data-dir ./data/train_100M \
     --val-data-dir ./data/val_5M
