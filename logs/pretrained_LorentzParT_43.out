@@ -1,0 +1,88 @@
+Node list: nid001896
+Mon Oct 27 08:07:10 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 550.163.01             Driver Version: 550.163.01     CUDA Version: 12.4     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-40GB          On  |   00000000:03:00.0 Off |                    0 |
+| N/A   30C    P0             53W /  400W |       1MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA A100-SXM4-40GB          On  |   00000000:41:00.0 Off |                    0 |
+| N/A   29C    P0             54W /  400W |       1MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA A100-SXM4-40GB          On  |   00000000:82:00.0 Off |                    0 |
+| N/A   30C    P0             54W /  400W |       1MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA A100-SXM4-40GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   28C    P0             54W /  400W |       1MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+step: 10000/500000 | train_loss: 1.1467 | train_metric: 0.5848
+step: 20000/500000 | train_loss: 1.0673 | train_metric: 0.6143
+step: 30000/500000 | train_loss: 1.0293 | train_metric: 0.6282
+step: 40000/500000 | train_loss: 1.0048 | train_metric: 0.6373
+step: 50000/500000 | train_loss: 0.9881 | train_metric: 0.6437
+step: 60000/500000 | train_loss: 0.9751 | train_metric: 0.6485
+step: 70000/500000 | train_loss: 0.9649 | train_metric: 0.6524
+step: 80000/500000 | train_loss: 0.9563 | train_metric: 0.6557
+step: 90000/500000 | train_loss: 0.9491 | train_metric: 0.6585
+step: 100000/500000 | train_loss: 0.9430 | train_metric: 0.6608
+epoch: 1/5 | val_loss: 0.9845 | val_metric: 0.6451
+step: 110000/500000 | train_loss: 0.8860 | train_metric: 0.6827
+step: 120000/500000 | train_loss: 0.8842 | train_metric: 0.6834
+step: 130000/500000 | train_loss: 0.8828 | train_metric: 0.6839
+step: 140000/500000 | train_loss: 0.8816 | train_metric: 0.6843
+step: 150000/500000 | train_loss: 0.8804 | train_metric: 0.6848
+step: 160000/500000 | train_loss: 0.8794 | train_metric: 0.6852
+step: 170000/500000 | train_loss: 0.8784 | train_metric: 0.6856
+step: 180000/500000 | train_loss: 0.8773 | train_metric: 0.6860
+step: 190000/500000 | train_loss: 0.8766 | train_metric: 0.6863
+step: 200000/500000 | train_loss: 0.8758 | train_metric: 0.6866
+epoch: 2/5 | val_loss: 0.8701 | val_metric: 0.6893
+step: 210000/500000 | train_loss: 0.8673 | train_metric: 0.6898
+step: 220000/500000 | train_loss: 0.8671 | train_metric: 0.6899
+step: 230000/500000 | train_loss: 0.8662 | train_metric: 0.6903
+step: 240000/500000 | train_loss: 0.8659 | train_metric: 0.6905
+step: 250000/500000 | train_loss: 0.8657 | train_metric: 0.6906
+step: 260000/500000 | train_loss: 0.8654 | train_metric: 0.6907
+step: 270000/500000 | train_loss: 0.8648 | train_metric: 0.6909
+step: 280000/500000 | train_loss: 0.8643 | train_metric: 0.6911
+step: 290000/500000 | train_loss: 0.8640 | train_metric: 0.6912
+step: 300000/500000 | train_loss: 0.8636 | train_metric: 0.6913
+epoch: 3/5 | val_loss: 0.8554 | val_metric: 0.6941
+step: 310000/500000 | train_loss: 0.8593 | train_metric: 0.6929
+step: 320000/500000 | train_loss: 0.8591 | train_metric: 0.6931
+step: 330000/500000 | train_loss: 0.8585 | train_metric: 0.6932
+step: 340000/500000 | train_loss: 0.8585 | train_metric: 0.6932
+step: 350000/500000 | train_loss: 0.8583 | train_metric: 0.6933
+step: 360000/500000 | train_loss: 0.8582 | train_metric: 0.6933
+step: 370000/500000 | train_loss: 0.8576 | train_metric: 0.6936
+step: 380000/500000 | train_loss: 0.8569 | train_metric: 0.6939
+step: 390000/500000 | train_loss: 0.8560 | train_metric: 0.6943
+step: 400000/500000 | train_loss: 0.8550 | train_metric: 0.6946
+epoch: 4/5 | val_loss: 0.8482 | val_metric: 0.6973
+step: 410000/500000 | train_loss: 0.8437 | train_metric: 0.6988
+step: 420000/500000 | train_loss: 0.8434 | train_metric: 0.6990
+step: 430000/500000 | train_loss: 0.8430 | train_metric: 0.6991
+step: 440000/500000 | train_loss: 0.8428 | train_metric: 0.6991
+step: 450000/500000 | train_loss: 0.8425 | train_metric: 0.6993
+step: 460000/500000 | train_loss: 0.8422 | train_metric: 0.6994
+step: 470000/500000 | train_loss: 0.8417 | train_metric: 0.6996
+step: 480000/500000 | train_loss: 0.8414 | train_metric: 0.6997
+step: 490000/500000 | train_loss: 0.8412 | train_metric: 0.6997
+step: 500000/500000 | train_loss: 0.8410 | train_metric: 0.6998
+epoch: 5/5 | val_loss: 0.8432 | val_metric: 0.6990

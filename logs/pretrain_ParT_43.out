@@ -1,0 +1,88 @@
+Node list: nid008245
+Wed Oct 22 17:16:46 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 550.163.01             Driver Version: 550.163.01     CUDA Version: 12.4     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:03:00.0 Off |                    0 |
+| N/A   28C    P0             62W /  500W |       1MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA A100-SXM4-80GB          On  |   00000000:41:00.0 Off |                    0 |
+| N/A   27C    P0             64W /  500W |       1MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA A100-SXM4-80GB          On  |   00000000:82:00.0 Off |                    0 |
+| N/A   28C    P0             64W /  500W |       1MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA A100-SXM4-80GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   28C    P0             63W /  500W |       1MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+step: 10000/500000 | pT_loss: 0.2266 | eta_loss: 0.1942 | phi_loss: 0.0612 | energy_loss: 0.2387 | total_train_loss: 0.1802
+step: 20000/500000 | pT_loss: 0.1842 | eta_loss: 0.1725 | phi_loss: 0.0440 | energy_loss: 0.1957 | total_train_loss: 0.1491
+step: 30000/500000 | pT_loss: 0.1666 | eta_loss: 0.1644 | phi_loss: 0.0373 | energy_loss: 0.1778 | total_train_loss: 0.1365
+step: 40000/500000 | pT_loss: 0.1566 | eta_loss: 0.1598 | phi_loss: 0.0337 | energy_loss: 0.1675 | total_train_loss: 0.1294
+step: 50000/500000 | pT_loss: 0.1499 | eta_loss: 0.1568 | phi_loss: 0.0314 | energy_loss: 0.1609 | total_train_loss: 0.1247
+step: 60000/500000 | pT_loss: 0.1451 | eta_loss: 0.1545 | phi_loss: 0.0298 | energy_loss: 0.1559 | total_train_loss: 0.1213
+step: 70000/500000 | pT_loss: 0.1413 | eta_loss: 0.1527 | phi_loss: 0.0285 | energy_loss: 0.1519 | total_train_loss: 0.1186
+step: 80000/500000 | pT_loss: 0.1382 | eta_loss: 0.1512 | phi_loss: 0.0276 | energy_loss: 0.1488 | total_train_loss: 0.1165
+step: 90000/500000 | pT_loss: 0.1358 | eta_loss: 0.1500 | phi_loss: 0.0269 | energy_loss: 0.1462 | total_train_loss: 0.1147
+step: 100000/500000 | pT_loss: 0.1337 | eta_loss: 0.1490 | phi_loss: 0.0262 | energy_loss: 0.1441 | total_train_loss: 0.1133
+epoch: 1/5 | pT_loss: 0.1117 | eta_loss: 0.1385 | phi_loss: 0.2433 | energy_loss: 0.1209 | total_val_loss: 0.1536
+step: 110000/500000 | pT_loss: 0.1142 | eta_loss: 0.1397 | phi_loss: 0.0205 | energy_loss: 0.1233 | total_train_loss: 0.0994
+step: 120000/500000 | pT_loss: 0.1141 | eta_loss: 0.1395 | phi_loss: 0.0204 | energy_loss: 0.1233 | total_train_loss: 0.0993
+step: 130000/500000 | pT_loss: 0.1139 | eta_loss: 0.1392 | phi_loss: 0.0204 | energy_loss: 0.1231 | total_train_loss: 0.0992
+step: 140000/500000 | pT_loss: 0.1136 | eta_loss: 0.1390 | phi_loss: 0.0204 | energy_loss: 0.1228 | total_train_loss: 0.0989
+step: 150000/500000 | pT_loss: 0.1136 | eta_loss: 0.1388 | phi_loss: 0.0203 | energy_loss: 0.1226 | total_train_loss: 0.0988
+step: 160000/500000 | pT_loss: 0.1134 | eta_loss: 0.1386 | phi_loss: 0.0203 | energy_loss: 0.1225 | total_train_loss: 0.0987
+step: 170000/500000 | pT_loss: 0.1132 | eta_loss: 0.1384 | phi_loss: 0.0203 | energy_loss: 0.1224 | total_train_loss: 0.0986
+step: 180000/500000 | pT_loss: 0.1129 | eta_loss: 0.1383 | phi_loss: 0.0202 | energy_loss: 0.1221 | total_train_loss: 0.0984
+step: 190000/500000 | pT_loss: 0.1128 | eta_loss: 0.1381 | phi_loss: 0.0202 | energy_loss: 0.1220 | total_train_loss: 0.0983
+step: 200000/500000 | pT_loss: 0.1127 | eta_loss: 0.1380 | phi_loss: 0.0202 | energy_loss: 0.1219 | total_train_loss: 0.0982
+epoch: 2/5 | pT_loss: 0.1134 | eta_loss: 0.1352 | phi_loss: 0.3562 | energy_loss: 0.1209 | total_val_loss: 0.1814
+step: 210000/500000 | pT_loss: 0.1112 | eta_loss: 0.1364 | phi_loss: 0.0198 | energy_loss: 0.1201 | total_train_loss: 0.0969
+step: 220000/500000 | pT_loss: 0.1113 | eta_loss: 0.1365 | phi_loss: 0.0198 | energy_loss: 0.1202 | total_train_loss: 0.0969
+step: 230000/500000 | pT_loss: 0.1112 | eta_loss: 0.1365 | phi_loss: 0.0198 | energy_loss: 0.1201 | total_train_loss: 0.0969
+step: 240000/500000 | pT_loss: 0.1110 | eta_loss: 0.1365 | phi_loss: 0.0198 | energy_loss: 0.1199 | total_train_loss: 0.0968
+step: 250000/500000 | pT_loss: 0.1108 | eta_loss: 0.1364 | phi_loss: 0.0198 | energy_loss: 0.1197 | total_train_loss: 0.0967
+step: 260000/500000 | pT_loss: 0.1106 | eta_loss: 0.1363 | phi_loss: 0.0198 | energy_loss: 0.1196 | total_train_loss: 0.0966
+step: 270000/500000 | pT_loss: 0.1106 | eta_loss: 0.1363 | phi_loss: 0.0198 | energy_loss: 0.1195 | total_train_loss: 0.0965
+step: 280000/500000 | pT_loss: 0.1105 | eta_loss: 0.1362 | phi_loss: 0.0198 | energy_loss: 0.1194 | total_train_loss: 0.0965
+step: 290000/500000 | pT_loss: 0.1105 | eta_loss: 0.1362 | phi_loss: 0.0197 | energy_loss: 0.1194 | total_train_loss: 0.0964
+step: 300000/500000 | pT_loss: 0.1105 | eta_loss: 0.1361 | phi_loss: 0.0197 | energy_loss: 0.1193 | total_train_loss: 0.0964
+epoch: 3/5 | pT_loss: 0.1131 | eta_loss: 0.1351 | phi_loss: 0.4147 | energy_loss: 0.1215 | total_val_loss: 0.1961
+step: 310000/500000 | pT_loss: 0.1103 | eta_loss: 0.1356 | phi_loss: 0.0196 | energy_loss: 0.1192 | total_train_loss: 0.0962
+step: 320000/500000 | pT_loss: 0.1106 | eta_loss: 0.1355 | phi_loss: 0.0195 | energy_loss: 0.1191 | total_train_loss: 0.0962
+step: 330000/500000 | pT_loss: 0.1103 | eta_loss: 0.1355 | phi_loss: 0.0195 | energy_loss: 0.1188 | total_train_loss: 0.0960
+step: 340000/500000 | pT_loss: 0.1101 | eta_loss: 0.1355 | phi_loss: 0.0195 | energy_loss: 0.1187 | total_train_loss: 0.0960
+step: 350000/500000 | pT_loss: 0.1101 | eta_loss: 0.1354 | phi_loss: 0.0195 | energy_loss: 0.1188 | total_train_loss: 0.0960
+step: 360000/500000 | pT_loss: 0.1099 | eta_loss: 0.1354 | phi_loss: 0.0195 | energy_loss: 0.1185 | total_train_loss: 0.0958
+step: 370000/500000 | pT_loss: 0.1098 | eta_loss: 0.1354 | phi_loss: 0.0195 | energy_loss: 0.1185 | total_train_loss: 0.0958
+step: 380000/500000 | pT_loss: 0.1098 | eta_loss: 0.1354 | phi_loss: 0.0195 | energy_loss: 0.1185 | total_train_loss: 0.0958
+step: 390000/500000 | pT_loss: 0.1097 | eta_loss: 0.1353 | phi_loss: 0.0195 | energy_loss: 0.1183 | total_train_loss: 0.0957
+step: 400000/500000 | pT_loss: 0.1096 | eta_loss: 0.1353 | phi_loss: 0.0195 | energy_loss: 0.1182 | total_train_loss: 0.0956
+epoch: 4/5 | pT_loss: 0.1160 | eta_loss: 0.1349 | phi_loss: 0.4353 | energy_loss: 0.1230 | total_val_loss: 0.2023
+step: 410000/500000 | pT_loss: 0.1086 | eta_loss: 0.1350 | phi_loss: 0.0194 | energy_loss: 0.1174 | total_train_loss: 0.0951
+step: 420000/500000 | pT_loss: 0.1085 | eta_loss: 0.1349 | phi_loss: 0.0194 | energy_loss: 0.1170 | total_train_loss: 0.0950
+step: 430000/500000 | pT_loss: 0.1086 | eta_loss: 0.1350 | phi_loss: 0.0194 | energy_loss: 0.1169 | total_train_loss: 0.0950
+step: 440000/500000 | pT_loss: 0.1087 | eta_loss: 0.1350 | phi_loss: 0.0194 | energy_loss: 0.1170 | total_train_loss: 0.0950
+step: 450000/500000 | pT_loss: 0.1086 | eta_loss: 0.1350 | phi_loss: 0.0194 | energy_loss: 0.1172 | total_train_loss: 0.0950
+step: 460000/500000 | pT_loss: 0.1086 | eta_loss: 0.1349 | phi_loss: 0.0194 | energy_loss: 0.1171 | total_train_loss: 0.0950
+step: 470000/500000 | pT_loss: 0.1086 | eta_loss: 0.1349 | phi_loss: 0.0193 | energy_loss: 0.1171 | total_train_loss: 0.0950
+step: 480000/500000 | pT_loss: 0.1087 | eta_loss: 0.1349 | phi_loss: 0.0193 | energy_loss: 0.1171 | total_train_loss: 0.0950
+step: 490000/500000 | pT_loss: 0.1087 | eta_loss: 0.1348 | phi_loss: 0.0193 | energy_loss: 0.1171 | total_train_loss: 0.0950
+step: 500000/500000 | pT_loss: 0.1087 | eta_loss: 0.1348 | phi_loss: 0.0193 | energy_loss: 0.1171 | total_train_loss: 0.0950
+epoch: 5/5 | pT_loss: 0.1123 | eta_loss: 0.1351 | phi_loss: 0.4581 | energy_loss: 0.1223 | total_val_loss: 0.2070
